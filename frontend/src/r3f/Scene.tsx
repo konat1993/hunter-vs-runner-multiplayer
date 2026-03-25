@@ -65,21 +65,20 @@ function GameLoop({
 
 		const input = buildInputFrame(inputSeq++, dtMs);
 
-		// Only send input if there's movement or sprint
-		if (input.dirX !== 0 || input.dirZ !== 0 || input.sprint) {
-			if (input.dirX !== 0 || input.dirZ !== 0) {
-				onLocalFacingUpdate(
-					Math.atan2(input.dirX, input.dirZ),
-				);
-			}
-			const predicted = predictionBuffer.applyInput(input);
-			setLocalTransform({
-				x: predicted.x,
-				z: predicted.z,
-				stamina: predicted.stamina,
-			});
-			sendInput(room, input);
+		// Always send latest input state, including neutral input after key release.
+		if (input.dirX !== 0 || input.dirZ !== 0) {
+			onLocalFacingUpdate(
+				Math.atan2(input.dirX, input.dirZ),
+			);
 		}
+		const predicted = predictionBuffer.applyInput(input);
+		setLocalTransform({
+			x: predicted.x,
+			z: predicted.z,
+			stamina: predicted.stamina,
+			sprintReady: predicted.sprintReady,
+		});
+		sendInput(room, input);
 	});
 
 	return null;

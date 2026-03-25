@@ -42,6 +42,7 @@ export class GameRoom extends Room<{ state: GameState }> {
   private disconnectedSessionId: string | null = null;
   private explicitQuitSessionIds = new Set<string>();
   private pendingInputs = new Map<string, InputPayload[]>();
+  private lastInputBySession = new Map<string, InputPayload>();
 
   static getActiveRoomIdForUser(userId: string): string | null {
     const roomId = this.activeRoomByUserId.get(userId);
@@ -86,6 +87,7 @@ export class GameRoom extends Room<{ state: GameState }> {
       const queue = this.pendingInputs.get(client.sessionId) ?? [];
       queue.push(input);
       this.pendingInputs.set(client.sessionId, queue);
+      this.lastInputBySession.set(client.sessionId, input);
     });
 
     this.onMessage('player:ready', () => {
@@ -147,6 +149,18 @@ export class GameRoom extends Room<{ state: GameState }> {
       const queued = this.pendingInputs.get(reclaimedSessionId) ?? [];
       this.pendingInputs.delete(reclaimedSessionId);
       this.pendingInputs.set(client.sessionId, queued);
+      const lastInput = this.lastInputBySession.get(reclaimedSessionId);
+      this.lastInputBySession.delete(reclaimedSessionId);
+      this.lastInputBySession.set(
+        client.sessionId,
+        lastInput ?? {
+          seq: 0,
+          dirX: 0,
+          dirZ: 0,
+          sprint: false,
+          dtMs: 0,
+        },
+      );
       if (this.explicitQuitSessionIds.has(reclaimedSessionId)) {
         this.explicitQuitSessionIds.delete(reclaimedSessionId);
       }
@@ -170,6 +184,13 @@ export class GameRoom extends Room<{ state: GameState }> {
 
       this.state.players.set(client.sessionId, player);
       this.pendingInputs.set(client.sessionId, []);
+      this.lastInputBySession.set(client.sessionId, {
+        seq: 0,
+        dirX: 0,
+        dirZ: 0,
+        sprint: false,
+        dtMs: 0,
+      });
     }
     console.log(
       `[GameRoom:${this.roomId}] join session=${client.sessionId} clients=${this.clients.length}`,
@@ -239,6 +260,10 @@ export class GameRoom extends Room<{ state: GameState }> {
 
       const inputs = this.pendingInputs.get(sessionId) ?? [];
       this.pendingInputs.set(sessionId, []);
+      const latestInput =
+        inputs.length > 0
+          ? inputs[inputs.length - 1]
+          : this.lastInputBySession.get(sessionId);
 
       if (inputs.length > 0) {
         const dtPerInput = dtMs / inputs.length;
@@ -247,6 +272,10 @@ export class GameRoom extends Room<{ state: GameState }> {
           updateStamina(player, input.sprint, isMoving, dtPerInput);
           applyMovement(player, input, dtPerInput);
         }
+      } else if (latestInput) {
+        const isMoving = latestInput.dirX !== 0 || latestInput.dirZ !== 0;
+        updateStamina(player, latestInput.sprint, isMoving, dtMs);
+        applyMovement(player, latestInput, dtMs);
       } else {
         updateStamina(player, false, false, dtMs);
       }
@@ -439,12 +468,14 @@ export class GameRoom extends Room<{ state: GameState }> {
       }
       this.explicitQuitSessionIds.delete(client.sessionId);
       this.pendingInputs.delete(client.sessionId);
+      this.lastInputBySession.delete(client.sessionId);
       return;
     }
 
     if (this.explicitQuitSessionIds.has(client.sessionId)) {
       this.explicitQuitSessionIds.delete(client.sessionId);
       this.pendingInputs.delete(client.sessionId);
+      this.lastInputBySession.delete(client.sessionId);
       return;
     }
 
@@ -455,6 +486,7 @@ export class GameRoom extends Room<{ state: GameState }> {
       player.connected = false;
     }
     this.pendingInputs.delete(client.sessionId);
+    this.lastInputBySession.delete(client.sessionId);
     console.log(
       `[GameRoom:${this.roomId}] leave session=${client.sessionId} clients=${this.clients.length}`,
     );
