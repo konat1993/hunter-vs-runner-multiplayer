@@ -16,12 +16,25 @@ async function bootstrap() {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  const isOriginAllowed = (origin: string) => {
+    return allowedCorsOrigins.some((allowedOrigin) => {
+      if (allowedOrigin === origin) return true;
+      if (!allowedOrigin.includes('*')) return false;
+
+      // Supports values like "https://*.vercel.app"
+      const escaped = allowedOrigin
+        .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/\*/g, '.*');
+      return new RegExp(`^${escaped}$`).test(origin);
+    });
+  };
+
   const gameServer = new Server({
     express: (expressApp) => {
       expressApp.use((req, res, next) => {
         const requestOrigin = req.headers.origin;
         const resolvedOrigin =
-          requestOrigin && allowedCorsOrigins.includes(requestOrigin)
+          requestOrigin && isOriginAllowed(requestOrigin)
             ? requestOrigin
             : allowedCorsOrigins[0];
 

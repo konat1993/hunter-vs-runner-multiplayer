@@ -46,11 +46,43 @@ export function StartRoute() {
 			return;
 		}
 
-		setActiveSessionLoading(true);
-		fetchActiveGameRoomId(accessToken)
-			.then((roomId) => setActiveRoomId(roomId))
-			.catch(() => setActiveRoomId(null))
-			.finally(() => setActiveSessionLoading(false));
+		let cancelled = false;
+		const detectActiveMatch = async () => {
+			setActiveSessionLoading(true);
+			try {
+				// First attempt should be immediate; if backend is cold/unavailable,
+				// retry for a few seconds to avoid hiding "return to match" incorrectly.
+				for (let attempt = 0; attempt < 8; attempt += 1) {
+					try {
+						const roomId =
+							await fetchActiveGameRoomId(
+								accessToken,
+							);
+						if (cancelled) return;
+						setActiveRoomId(roomId);
+						return;
+					} catch {
+						if (attempt === 7) {
+							if (!cancelled)
+								setActiveRoomId(
+									null,
+								);
+							return;
+						}
+						await sleep(1200);
+					}
+				}
+			} finally {
+				if (!cancelled) {
+					setActiveSessionLoading(false);
+				}
+			}
+		};
+
+		void detectActiveMatch();
+		return () => {
+			cancelled = true;
+		};
 	}, [session?.access_token]);
 
 	async function handleSignIn() {

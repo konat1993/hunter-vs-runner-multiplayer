@@ -10,7 +10,11 @@ import { HUD } from '../ui/HUD';
 import { CountdownOverlay } from '../ui/CountdownOverlay';
 import { EndOverlay } from '../ui/EndOverlay';
 import { CAMERA_POSITION, CAMERA_FOV } from '../game/camera';
-import { RENDERER_DPR_MAX } from '../game/perf';
+import {
+  RENDERER_ANTIALIAS,
+  RENDERER_DPR_MAX,
+  RENDERER_POWER_PREFERENCE,
+} from '../game/perf';
 import type { GameOverMessage, GameRoomStateSnapshot } from '../game/room-types';
 
 export function GameRoute() {
@@ -100,7 +104,7 @@ export function GameRoute() {
       <Canvas
         camera={{ position: CAMERA_POSITION, fov: CAMERA_FOV }}
         style={{ width: '100%', height: '100%' }}
-        gl={{ antialias: true }}
+        gl={{ antialias: RENDERER_ANTIALIAS, powerPreference: RENDERER_POWER_PREFERENCE }}
         shadows={false}
         dpr={[1, RENDERER_DPR_MAX]}
       >

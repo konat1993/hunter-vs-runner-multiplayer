@@ -28,6 +28,10 @@ export async function fetchActiveGameRoomId(accessToken: string): Promise<string
     },
   });
 
+  if (response.status >= 500) {
+    throw new Error(`Backend unavailable (${response.status})`);
+  }
+
   if (!response.ok) {
     return null;
   }
