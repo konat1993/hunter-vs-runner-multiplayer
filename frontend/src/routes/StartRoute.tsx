@@ -52,7 +52,11 @@ export function StartRoute() {
 			try {
 				// First attempt should be immediate; if backend is cold/unavailable,
 				// retry for a few seconds to avoid hiding "return to match" incorrectly.
-				for (let attempt = 0; attempt < 8; attempt += 1) {
+				for (
+					let attempt = 0;
+					attempt < 8;
+					attempt += 1
+				) {
 					try {
 						const roomId =
 							await fetchActiveGameRoomId(
@@ -147,8 +151,9 @@ export function StartRoute() {
 		setResumeLoading(true);
 		setResumeError("");
 		try {
-			let room: Awaited<ReturnType<typeof joinGameRoomById>> | null =
-				null;
+			let room: Awaited<
+				ReturnType<typeof joinGameRoomById>
+			> | null = null;
 			let lastError: unknown = null;
 
 			// Backend can still be in lock/seat transition for a short moment.
@@ -385,9 +390,10 @@ export function StartRoute() {
 								}}
 							>
 								Active match
-								detected for your
-								account. Do you
-								want to return?
+								detected for
+								your account. Do
+								you want to
+								return?
 							</p>
 							<button
 								className="btn-neon-runner focus-ring"
@@ -454,6 +460,13 @@ export function StartRoute() {
 											.value,
 									)
 								}
+								onKeyDown={(e) => {
+									// Allow keyboard-only login: Enter on email sends OTP.
+									if (e.key !== "Enter") return;
+									if (otpSent || authLoading) return;
+									e.preventDefault();
+									void handleSignIn();
+								}}
 								className="focus-ring"
 								style={{
 									width: "100%",
@@ -486,6 +499,13 @@ export function StartRoute() {
 												.value,
 										)
 									}
+									onKeyDown={(e) => {
+										// Allow keyboard-only login: Enter on OTP verifies.
+										if (e.key !== "Enter") return;
+										if (!otpSent || authLoading) return;
+										e.preventDefault();
+										void handleVerifyOtp();
+									}}
 									className="focus-ring"
 									style={{
 										width: "100%",
