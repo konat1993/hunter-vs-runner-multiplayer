@@ -5,6 +5,11 @@ import { Server } from '@colyseus/core';
 import { GameRoom } from './colyseus/rooms/game.room';
 import { SupabaseService } from './supabase/supabase.service';
 
+/** The origin from the browser never has a trailing /; CORS requires an exact match with the Origin header. */
+function normalizeOrigin(origin: string): string {
+  return origin.replace(/\/+$/, '');
+}
+
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
   const port = parseInt(process.env.PORT ?? '2567', 10);
@@ -13,19 +18,20 @@ async function bootstrap() {
     process.env.CORS_ORIGIN ?? 'http://localhost:5173'
   )
     .split(',')
-    .map((origin) => origin.trim())
+    .map((origin) => normalizeOrigin(origin.trim()))
     .filter(Boolean);
 
   const isOriginAllowed = (origin: string) => {
+    const normalizedRequest = normalizeOrigin(origin);
     return allowedCorsOrigins.some((allowedOrigin) => {
-      if (allowedOrigin === origin) return true;
+      if (allowedOrigin === normalizedRequest) return true;
       if (!allowedOrigin.includes('*')) return false;
 
       // Supports values like "https://*.vercel.app"
       const escaped = allowedOrigin
         .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
         .replace(/\*/g, '.*');
-      return new RegExp(`^${escaped}$`).test(origin);
+      return new RegExp(`^${escaped}$`).test(normalizedRequest);
     });
   };
 

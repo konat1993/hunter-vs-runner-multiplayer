@@ -16,5 +16,7 @@ export const config = {
   supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
   colyseusEndpoint,
   backendHttpEndpoint,
-  siteUrl: (import.meta.env.VITE_SITE_URL as string) || 'http://localhost:5173',
+  siteUrl: trimTrailingSlashes(
+    (import.meta.env.VITE_SITE_URL as string) || 'http://localhost:5173',
+  ),
 } as const;
