@@ -46,6 +46,12 @@ export function EndOverlay() {
     navigate('/matchmaking');
   }
 
+  async function handleQuitToHome() {
+    await refreshStats();
+    reset();
+    navigate('/', { replace: true });
+  }
+
   return (
     <div
       style={{
@@ -132,17 +138,31 @@ export function EndOverlay() {
         <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.07)', marginBottom: '24px' }} />
 
         {/* Play Again */}
-        <button
-          className={`${btnClass} focus-ring`}
-          onClick={handlePlayAgain}
-          style={{
-            width: '100%',
-            padding: '16px 0',
-            fontSize: '20px',
-          }}
-        >
-          PLAY AGAIN
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <button
+            className={`${btnClass} focus-ring`}
+            onClick={handlePlayAgain}
+            style={{
+              width: '100%',
+              padding: '16px 0',
+              fontSize: '20px',
+            }}
+          >
+            PLAY AGAIN
+          </button>
+          <button
+            className="btn-ghost focus-ring"
+            onClick={handleQuitToHome}
+            type="button"
+            style={{
+              width: '100%',
+              padding: '14px 0',
+              fontSize: '16px',
+            }}
+          >
+            QUIT TO MENU
+          </button>
+        </div>
       </div>
     </div>
   );

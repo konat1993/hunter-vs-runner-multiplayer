@@ -101,6 +101,7 @@ export function MatchmakingRoute() {
 								3000,
 							state.matchMsRemaining ??
 								120000,
+							state.reconnectMsRemaining ?? 0,
 						);
 
 						if (

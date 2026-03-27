@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { useGameStore } from '../state/game.store';
+import { formatTime } from '../lib/time';
 import { useMatchmakingStore } from '../state/matchmaking.store';
 import { useAuthStore } from '../state/auth.store';
 import { joinGameRoomById } from '../lib/colyseus';
@@ -22,7 +23,8 @@ export function GameRoute() {
   const { roomId } = useParams<{ roomId: string }>();
   const { session } = useAuthStore();
   const { room: matchmakingRoom, setRoom: setMatchmakingRoom } = useMatchmakingStore();
-  const { room, phase, setRoom, setPhase, setTimers, setLocalSession, setEnded } = useGameStore();
+  const { room, phase, reconnectMs, setRoom, setPhase, setTimers, setLocalSession, setEnded } =
+    useGameStore();
 
   const activeRoom = room ?? matchmakingRoom;
 
@@ -73,7 +75,11 @@ export function GameRoute() {
     const handleStateChange = (state: GameRoomStateSnapshot) => {
       if (!state) return;
       if (state.phase) setPhase(state.phase);
-      setTimers(state.countdownMsRemaining ?? 3000, state.matchMsRemaining ?? 120000);
+      setTimers(
+        state.countdownMsRemaining ?? 3000,
+        state.matchMsRemaining ?? 120000,
+        state.reconnectMsRemaining ?? 0,
+      );
 
       // Sync local session/role once
       state.players?.forEach((player, sessionId) => {
@@ -120,17 +126,47 @@ export function GameRoute() {
             position: 'absolute',
             inset: 0,
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
+            gap: '16px',
+            padding: '24px',
+            textAlign: 'center',
             background: 'rgba(0,0,0,0.35)',
             color: '#f0f0fa',
             fontFamily: '"Rajdhani", system-ui, sans-serif',
-            fontSize: '28px',
             letterSpacing: '0.04em',
             zIndex: 20,
           }}
         >
-          OPPONENT DISCONNECTED — WAITING 30s
+          <span style={{ fontSize: '28px' }}>OPPONENT DISCONNECTED</span>
+          <span
+            aria-live="polite"
+            aria-atomic="true"
+            style={{
+              fontFamily: '"Share Tech Mono", monospace',
+              fontSize: 'clamp(72px, 14vw, 120px)',
+              fontWeight: 400,
+              lineHeight: 1,
+              color: '#00dcff',
+              textShadow: '0 0 24px rgba(0,220,255,0.45)',
+            }}
+          >
+            {formatTime(reconnectMs)}
+          </span>
+          <span
+            style={{
+              fontFamily: '"Inter", system-ui, sans-serif',
+              fontSize: '15px',
+              fontWeight: 400,
+              letterSpacing: '0.02em',
+              color: '#a5a5c2',
+              maxWidth: '420px',
+              lineHeight: 1.45,
+            }}
+          >
+            If they don’t return before the timer hits 0:00, you win the match.
+          </span>
         </div>
       )}
       {phase === 'ENDED' && <EndOverlay />}

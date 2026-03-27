@@ -17,6 +17,7 @@ export interface GameRoomStateSnapshot {
   phase?: Phase;
   countdownMsRemaining?: number;
   matchMsRemaining?: number;
+  reconnectMsRemaining?: number;
   endReason?: string;
   winnerSessionId?: string;
   players?: {

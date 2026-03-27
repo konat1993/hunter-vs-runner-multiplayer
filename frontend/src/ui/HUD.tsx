@@ -8,7 +8,8 @@ export function HUD() {
   const navigate = useNavigate();
   const [showGuide, setShowGuide] = useState(false);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
-  const { room, localRole, localTransform, matchMs, reset } = useGameStore();
+  const { room, phase, localRole, localTransform, matchMs, reconnectMs, reset } = useGameStore();
+  const hudZ = phase === 'PAUSED' ? 25 : 10;
   const stamina = localTransform.stamina;
   const sprintReady = localTransform.sprintReady;
   const isHunter = localRole === 'HUNTER';
@@ -21,9 +22,11 @@ export function HUD() {
     ? '0 0 10px rgba(255,80,16,0.8)'
     : '0 0 10px rgba(0,220,255,0.8)';
 
-  const isUrgent = matchMs <= 10000;
-  const isWarning = matchMs <= 30000;
-  const timerColor = isWarning ? '#ff5010' : '#f0f0fa';
+  const displayMatchMs = phase === 'PAUSED' ? reconnectMs : matchMs;
+  const isUrgent = displayMatchMs <= 10000;
+  const isWarning = displayMatchMs <= 30000;
+  const timerColor =
+    phase === 'PAUSED' ? '#00dcff' : isWarning ? '#ff5010' : '#f0f0fa';
 
   const staminaPct = (stamina / 100) * 100;
   const staminaLow = stamina < 20;
@@ -75,7 +78,7 @@ export function HUD() {
         position: 'absolute',
         inset: 0,
         pointerEvents: 'none',
-        zIndex: 10,
+        zIndex: hudZ,
       }}
     >
       {/* Zone A — Timer (top center) */}
@@ -104,7 +107,7 @@ export function HUD() {
             display: 'block',
           }}
         >
-          {formatTime(matchMs)}
+          {formatTime(displayMatchMs)}
         </span>
       </div>
 

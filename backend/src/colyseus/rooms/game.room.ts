@@ -38,11 +38,11 @@ export class GameRoom extends Room<{ state: GameState }> {
   private elapsedMs = 0;
   private matchmakingTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private pausedPhaseBeforeDisconnect: string | null = null;
   private disconnectedSessionId: string | null = null;
   private explicitQuitSessionIds = new Set<string>();
   private pendingInputs = new Map<string, InputPayload[]>();
   private lastInputBySession = new Map<string, InputPayload>();
+  private countdownInterval: ReturnType<typeof setInterval> | null = null;
 
   static getActiveRoomIdForUser(userId: string): string | null {
     const roomId = this.activeRoomByUserId.get(userId);
@@ -208,6 +208,13 @@ export class GameRoom extends Room<{ state: GameState }> {
     }
   }
 
+  private clearCountdownInterval() {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
+  }
+
   private assignRolesAndSpawn() {
     const sessionIds: string[] = [];
     this.state.players.forEach((_player, sessionId) =>
@@ -226,19 +233,43 @@ export class GameRoom extends Room<{ state: GameState }> {
   }
 
   private startCountdown() {
+    this.clearCountdownInterval();
     this.state.phase = Phase.COUNTDOWN;
     this.state.countdownMsRemaining = 3000;
     this.trackUsersAsActive();
 
-    const countdownTimer = setInterval(() => {
+    this.countdownInterval = setInterval(() => {
       if (this.state.phase !== Phase.COUNTDOWN) return;
       this.state.countdownMsRemaining -= 100;
       if (this.state.countdownMsRemaining <= 0) {
-        clearInterval(countdownTimer);
+        this.clearCountdownInterval();
         this.state.countdownMsRemaining = 0;
         this.startMatch();
       }
     }, 100);
+  }
+
+  /** Same 3s UI as match start; does not reset match timer or catch state. */
+  private startReconnectCountdown() {
+    this.clearCountdownInterval();
+    this.state.phase = Phase.COUNTDOWN;
+    this.state.countdownMsRemaining = 3000;
+    this.trackUsersAsActive();
+
+    this.countdownInterval = setInterval(() => {
+      if (this.state.phase !== Phase.COUNTDOWN) return;
+      this.state.countdownMsRemaining -= 100;
+      if (this.state.countdownMsRemaining <= 0) {
+        this.clearCountdownInterval();
+        this.state.countdownMsRemaining = 0;
+        this.resumeMatchAfterReconnect();
+      }
+    }, 100);
+  }
+
+  private resumeMatchAfterReconnect() {
+    this.state.phase = Phase.RUNNING;
+    this.trackUsersAsActive();
   }
 
   private startMatch() {
@@ -250,7 +281,13 @@ export class GameRoom extends Room<{ state: GameState }> {
   }
 
   private update(dtMs: number) {
-    if (this.state.phase === Phase.PAUSED) return;
+    if (this.state.phase === Phase.PAUSED) {
+      this.state.reconnectMsRemaining = Math.max(
+        0,
+        this.state.reconnectMsRemaining - dtMs,
+      );
+      return;
+    }
     if (this.state.phase !== Phase.RUNNING) return;
 
     this.elapsedMs += dtMs;
@@ -324,14 +361,15 @@ export class GameRoom extends Room<{ state: GameState }> {
     loserSessionId: string,
   ) {
     if (this.state.phase === Phase.ENDED) return;
+    this.clearCountdownInterval();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
-    this.pausedPhaseBeforeDisconnect = null;
     this.disconnectedSessionId = null;
 
     this.state.phase = Phase.ENDED;
+    this.state.reconnectMsRemaining = 0;
     this.state.endReason = reason;
     this.state.winnerSessionId = winnerSessionId;
     this.maxClients = 2;
@@ -406,9 +444,10 @@ export class GameRoom extends Room<{ state: GameState }> {
     }
 
     player.connected = false;
+    this.clearCountdownInterval();
     this.disconnectedSessionId = client.sessionId;
-    this.pausedPhaseBeforeDisconnect = this.state.phase;
     this.state.phase = Phase.PAUSED;
+    this.state.reconnectMsRemaining = RECONNECT_GRACE_SECONDS * 1000;
     // Allow one temporary seat for returning player.
     this.maxClients = 3;
     // Temporarily unlock room so the same account can re-join by roomId.
@@ -438,15 +477,12 @@ export class GameRoom extends Room<{ state: GameState }> {
     if (player) player.connected = true;
 
     if (this.state.phase === Phase.PAUSED) {
-      this.state.phase =
-        this.pausedPhaseBeforeDisconnect === Phase.COUNTDOWN
-          ? Phase.COUNTDOWN
-          : Phase.RUNNING;
+      this.startReconnectCountdown();
     }
+    this.state.reconnectMsRemaining = 0;
     this.maxClients = 2;
     void this.lock();
 
-    this.pausedPhaseBeforeDisconnect = null;
     this.disconnectedSessionId = null;
   }
 
@@ -495,6 +531,7 @@ export class GameRoom extends Room<{ state: GameState }> {
   onDispose() {
     if (this.matchmakingTimer) clearTimeout(this.matchmakingTimer);
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.clearCountdownInterval();
     this.clearTrackedUsers();
     GameRoom.roomById.delete(this.roomId);
     console.log(`[GameRoom:${this.roomId}] disposed`);

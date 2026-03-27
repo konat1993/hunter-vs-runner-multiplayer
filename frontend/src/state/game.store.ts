@@ -30,6 +30,7 @@ interface GameState {
   remotePlayers: Map<string, RemotePlayerState>;
   countdownMs: number;
   matchMs: number;
+  reconnectMs: number;
   endReason: string | null;
   winnerSessionId: string | null;
   setRoom: (room: Room | null) => void;
@@ -38,7 +39,7 @@ interface GameState {
   setLocalTransform: (transform: Partial<PlayerTransform>) => void;
   updateRemotePlayer: (player: RemotePlayerState) => void;
   removeRemotePlayer: (sessionId: string) => void;
-  setTimers: (countdownMs: number, matchMs: number) => void;
+  setTimers: (countdownMs: number, matchMs: number, reconnectMs?: number) => void;
   setEnded: (endReason: string, winnerSessionId: string) => void;
   reset: () => void;
 }
@@ -61,6 +62,7 @@ export const useGameStore = create<GameState>((set) => ({
   remotePlayers: new Map(),
   countdownMs: 3000,
   matchMs: 120000,
+  reconnectMs: 0,
   endReason: null,
   winnerSessionId: null,
 
@@ -88,7 +90,8 @@ export const useGameStore = create<GameState>((set) => ({
     return { remotePlayers: next };
   }),
 
-  setTimers: (countdownMs, matchMs) => set({ countdownMs, matchMs }),
+  setTimers: (countdownMs, matchMs, reconnectMs = 0) =>
+    set({ countdownMs, matchMs, reconnectMs }),
 
   setEnded: (endReason, winnerSessionId) => set({
     phase: 'ENDED',
@@ -105,6 +108,7 @@ export const useGameStore = create<GameState>((set) => ({
     remotePlayers: new Map(),
     countdownMs: 3000,
     matchMs: 120000,
+    reconnectMs: 0,
     endReason: null,
     winnerSessionId: null,
   }),
