@@ -1,9 +1,15 @@
-const colyseusEndpoint =
-  (import.meta.env.VITE_COLYSEUS_ENDPOINT as string) || 'ws://localhost:2567';
+function trimTrailingSlashes(url: string): string {
+  return url.replace(/\/+$/, '');
+}
 
-const backendHttpEndpoint =
+const colyseusEndpoint = trimTrailingSlashes(
+  (import.meta.env.VITE_COLYSEUS_ENDPOINT as string) || 'ws://localhost:2567',
+);
+
+const backendHttpEndpoint = trimTrailingSlashes(
   (import.meta.env.VITE_BACKEND_HTTP_ENDPOINT as string) ||
-  colyseusEndpoint.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://');
+    colyseusEndpoint.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://'),
+);
 
 export const config = {
   supabaseUrl: import.meta.env.VITE_SUPABASE_URL as string,
