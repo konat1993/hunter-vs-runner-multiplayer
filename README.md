@@ -151,7 +151,6 @@ Backend:
 Important production notes:
 - Use `wss://` (never `ws://`) for `VITE_COLYSEUS_ENDPOINT` when frontend is on HTTPS.
 - Add Supabase redirect URL: `https://<your-vercel-domain>/auth/callback`.
-- Free hosting can sleep; first request may take up to ~60s.
 
 ### Docker
 
@@ -233,13 +232,11 @@ multiplayer-3d/
 - Keyboard only — no mobile joystick support
 - Single server (no horizontal scaling); for scale, use Colyseus distributed mode
 - Use `ws://` locally and `wss://` in production (`VITE_COLYSEUS_ENDPOINT`)
-- On free hosts, backend cold starts can delay first matchmaking request
 
 ## Portfolio Runbook
 
 - Backend health URL: `https://<render-domain>/health`
-- If game does not connect, first open the health URL once to wake the backend.
-- Then refresh the frontend and retry matchmaking after 30-60s.
+- If the game does not connect, confirm `/health` returns OK, verify `VITE_COLYSEUS_ENDPOINT` and CORS, then retry.
 - Check backend logs in Render dashboard and frontend logs in Vercel dashboard.
 - Optional uptime ping: monitor `/health` with [UptimeRobot](https://uptimerobot.com/) on a low-frequency interval.
 - Full post-deploy validation steps: `docs/deployment-checklist.md`

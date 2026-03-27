@@ -187,7 +187,7 @@ export function MatchmakingRoute() {
 				clearInterval(timerRef.current!);
 				setStatus("error");
 				setError(
-					"Cannot connect to matchmaking server. If this is your first request after inactivity, wait about 30-60 seconds and try again.",
+					"Cannot connect to matchmaking server. Check your connection and try again.",
 				);
 			}
 			return () => {
@@ -241,8 +241,6 @@ export function MatchmakingRoute() {
 	}
 
 	const isTimeout = status === "timeout" || status === "error";
-	const showColdStartHint =
-		status === "searching" && elapsedSeconds >= 8;
 
 	return (
 		<div
@@ -373,21 +371,6 @@ export function MatchmakingRoute() {
 								elapsedSeconds,
 							)}
 						</span>
-						{showColdStartHint ? (
-							<p
-								style={{
-									margin: 0,
-									fontFamily: '"Inter", system-ui, sans-serif',
-									fontSize: "13px",
-									color: "#a5a5c2",
-									textAlign: "center",
-									lineHeight: 1.4,
-								}}
-							>
-								Server may be waking up on a free hosting plan.
-								First connection can take up to 60s.
-							</p>
-						) : null}
 
 						{/* Cancel button */}
 						<button

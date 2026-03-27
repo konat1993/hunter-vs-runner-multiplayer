@@ -50,8 +50,7 @@ export function StartRoute() {
 		const detectActiveMatch = async () => {
 			setActiveSessionLoading(true);
 			try {
-				// First attempt should be immediate; if backend is cold/unavailable,
-				// retry for a few seconds to avoid hiding "return to match" incorrectly.
+				// Retry briefly on transient errors so we don’t hide “return to match” incorrectly.
 				for (
 					let attempt = 0;
 					attempt < 8;
