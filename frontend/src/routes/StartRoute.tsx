@@ -5,6 +5,7 @@ import { sendEmailOtp, signOut, verifyEmailOtp } from "../lib/supabase";
 import { fetchActiveGameRoomId, joinGameRoomById } from "../lib/colyseus";
 import { useGameStore } from "../state/game.store";
 import { useMatchmakingStore } from "../state/matchmaking.store";
+import { getMapDefinition, MAP_IDS, type MapId } from "../game/obstacles";
 
 function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
@@ -26,7 +27,11 @@ export function StartRoute() {
 	const navigate = useNavigate();
 	const { session, wins, losses, loading } = useAuthStore();
 	const { setRoom: setGameRoom } = useGameStore();
-	const { setRoom: setMatchmakingRoom } = useMatchmakingStore();
+	const {
+		setRoom: setMatchmakingRoom,
+		selectedMapId,
+		setSelectedMapId,
+	} = useMatchmakingStore();
 	const isLoggedIn = !!session;
 	const [email, setEmail] = useState("");
 	const [otpCode, setOtpCode] = useState("");
@@ -430,22 +435,117 @@ export function StartRoute() {
 					)}
 
 					{isLoggedIn ? (
-						<button
-							className="btn-neon-runner focus-ring"
-							onClick={handlePlay}
-							disabled={
-								activeSessionLoading
-							}
-							style={{
-								padding: "16px 0",
-								fontSize: "20px",
-								width: "100%",
-							}}
-						>
-							{activeSessionLoading
-								? "CHECKING..."
-								: "PLAY"}
-						</button>
+						<>
+							<div
+								style={{
+									display: "flex",
+									flexDirection: "column",
+									gap: "10px",
+									width: "100%",
+								}}
+							>
+								<span
+									style={{
+										fontFamily:
+											'"Inter", system-ui, sans-serif',
+										fontSize: "12px",
+										letterSpacing: "0.1em",
+										textTransform: "uppercase",
+										color: "#8888aa",
+										textAlign: "center",
+									}}
+								>
+									Map
+								</span>
+								<div
+									style={{
+										display: "flex",
+										gap: "10px",
+									}}
+								>
+									{MAP_IDS.map((id: MapId) => {
+										const def =
+											getMapDefinition(
+												id,
+											);
+										const active =
+											selectedMapId ===
+											id;
+										return (
+											<button
+												key={id}
+												type="button"
+												className="focus-ring"
+												onClick={() =>
+													setSelectedMapId(
+														id,
+													)
+												}
+												style={{
+													flex: 1,
+													padding:
+														"12px 10px",
+													borderRadius:
+														"12px",
+													border: active
+														? "2px solid rgba(0,220,255,0.65)"
+														: "1px solid rgba(255,255,255,0.12)",
+													background: active
+														? "rgba(0,220,255,0.1)"
+														: "rgba(255,255,255,0.03)",
+													color: "#f0f0fa",
+													cursor: "pointer",
+													fontFamily:
+														'"Rajdhani", system-ui, sans-serif',
+													fontSize:
+														"16px",
+													fontWeight: 600,
+												}}
+											>
+												{
+													def.label
+												}
+											</button>
+										);
+									})}
+								</div>
+								{getMapDefinition(
+									selectedMapId,
+								).queueHint ? (
+									<p
+										style={{
+											margin: 0,
+											fontSize: "12px",
+											lineHeight: 1.4,
+											color: "#8888aa",
+											textAlign: "center",
+										}}
+									>
+										{
+											getMapDefinition(
+												selectedMapId,
+											).queueHint
+										}
+									</p>
+								) : null}
+							</div>
+							<button
+								className="btn-neon-runner focus-ring"
+								onClick={handlePlay}
+								disabled={
+									activeSessionLoading
+								}
+								style={{
+									padding: "16px 0",
+									fontSize: "20px",
+									width: "100%",
+								}}
+							>
+								{activeSessionLoading
+									? "CHECKING..."
+									: "PLAY"}
+							</button>
+						</>
 					) : (
 						<>
 							<input

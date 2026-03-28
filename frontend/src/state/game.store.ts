@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Room } from '@colyseus/sdk';
+import type { MapId } from '../game/obstacles';
 
 export interface PlayerTransform {
   x: number;
@@ -23,6 +24,8 @@ export interface RemotePlayerState {
 
 interface GameState {
   room: Room | null;
+  /** Active match map; default until server state syncs. */
+  mapId: MapId;
   phase: string;
   localSessionId: string | null;
   localRole: string | null;
@@ -34,6 +37,7 @@ interface GameState {
   endReason: string | null;
   winnerSessionId: string | null;
   setRoom: (room: Room | null) => void;
+  setMapId: (mapId: MapId) => void;
   setPhase: (phase: string) => void;
   setLocalSession: (sessionId: string, role: string) => void;
   setLocalTransform: (transform: Partial<PlayerTransform>) => void;
@@ -55,6 +59,7 @@ const defaultTransform: PlayerTransform = {
 
 export const useGameStore = create<GameState>((set) => ({
   room: null,
+  mapId: 'classic',
   phase: 'MATCHMAKING',
   localSessionId: null,
   localRole: null,
@@ -67,6 +72,7 @@ export const useGameStore = create<GameState>((set) => ({
   winnerSessionId: null,
 
   setRoom: (room) => set({ room }),
+  setMapId: (mapId) => set({ mapId }),
   setPhase: (phase) => set({ phase }),
 
   setLocalSession: (sessionId, role) => set({
@@ -101,6 +107,7 @@ export const useGameStore = create<GameState>((set) => ({
 
   reset: () => set({
     room: null,
+    mapId: 'classic',
     phase: 'MATCHMAKING',
     localSessionId: null,
     localRole: null,

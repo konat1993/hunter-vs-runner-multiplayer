@@ -2,6 +2,8 @@ import { Schema, type, MapSchema } from '@colyseus/schema';
 import { PlayerState } from './PlayerState';
 
 export class GameState extends Schema {
+  /** Synced map id (`classic` | `maze`) for clients. */
+  @type('string') declare mapId: string;
   @type('string') declare phase: string;
   @type('number') declare countdownMsRemaining: number;
   @type('number') declare matchMsRemaining: number;
@@ -14,6 +16,7 @@ export class GameState extends Schema {
 
   constructor() {
     super();
+    this.mapId = 'classic';
     this.phase = 'MATCHMAKING';
     this.countdownMsRemaining = 3000;
     this.matchMsRemaining = 120000;

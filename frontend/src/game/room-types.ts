@@ -14,6 +14,7 @@ export interface PlayerSnapshot {
 }
 
 export interface GameRoomStateSnapshot {
+  mapId?: string;
   phase?: Phase;
   countdownMsRemaining?: number;
   matchMsRemaining?: number;

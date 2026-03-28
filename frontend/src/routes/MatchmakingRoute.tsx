@@ -4,6 +4,7 @@ import { useMatchmakingStore } from "../state/matchmaking.store";
 import { useGameStore } from "../state/game.store";
 import { useAuthStore } from "../state/auth.store";
 import { joinGameRoom } from "../lib/colyseus";
+import { isValidMapId } from "../game/obstacles";
 import type { Room } from "@colyseus/sdk";
 import type {
 	GameRoomStateSnapshot,
@@ -25,6 +26,7 @@ export function MatchmakingRoute() {
 		status,
 		elapsedSeconds,
 		errorMessage,
+		selectedMapId,
 		setStatus,
 		setRoom,
 		setElapsed,
@@ -33,6 +35,7 @@ export function MatchmakingRoute() {
 	} = useMatchmakingStore();
 	const {
 		setRoom: setGameRoom,
+		setMapId,
 		setPhase,
 		setLocalSession,
 		setTimers,
@@ -83,8 +86,10 @@ export function MatchmakingRoute() {
 			}, 1000);
 
 			try {
-				const gameRoom =
-					await joinGameRoom(accessToken);
+				const gameRoom = await joinGameRoom(
+					accessToken,
+					selectedMapId,
+				);
 				roomRef.current = gameRoom;
 				setRoom(gameRoom);
 				setGameRoom(gameRoom);
@@ -94,6 +99,12 @@ export function MatchmakingRoute() {
 					state: GameRoomStateSnapshot,
 				) => {
 						if (!state) return;
+						if (
+							state.mapId &&
+							isValidMapId(state.mapId)
+						) {
+							setMapId(state.mapId);
+						}
 						if (state.phase)
 							setPhase(state.phase);
 						setTimers(
@@ -231,6 +242,8 @@ export function MatchmakingRoute() {
 		setTimers,
 		setLocalSession,
 		setEnded,
+		setMapId,
+		selectedMapId,
 	]);
 
 	async function handleCancel() {

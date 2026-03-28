@@ -1,3 +1,5 @@
+import type { Obstacle } from '@map-config';
+import { getMapDefinition, type MapId } from '@map-config';
 import type { InputFrame } from './input';
 import {
   WALK_SPEED,
@@ -6,9 +8,8 @@ import {
   STAMINA_DRAIN_PER_SEC,
   STAMINA_REGEN_PER_SEC,
   SPRINT_MIN_STAMINA,
-  ARENA_HALF,
 } from './constants';
-import { OBSTACLES, PLAYER_COLLISION_RADIUS, resolveObstacleCollisions } from './obstacles';
+import { PLAYER_COLLISION_RADIUS, resolveObstacleCollisions } from './obstacles';
 
 export interface PredictedState {
   x: number;
@@ -20,6 +21,8 @@ export interface PredictedState {
 export function applyInputToState(
   state: PredictedState,
   input: InputFrame,
+  arenaHalf: number,
+  obstacles: Obstacle[],
 ): PredictedState {
   const dt = input.dtMs / 1000;
   let { x, z, stamina, sprintReady } = state;
@@ -35,10 +38,10 @@ export function applyInputToState(
   z += input.dirZ * speed * dt;
 
   // Clamp to arena bounds
-  x = Math.max(-ARENA_HALF, Math.min(ARENA_HALF, x));
-  z = Math.max(-ARENA_HALF, Math.min(ARENA_HALF, z));
+  x = Math.max(-arenaHalf, Math.min(arenaHalf, x));
+  z = Math.max(-arenaHalf, Math.min(arenaHalf, z));
 
-  const resolved = resolveObstacleCollisions(x, z, PLAYER_COLLISION_RADIUS, OBSTACLES);
+  const resolved = resolveObstacleCollisions(x, z, PLAYER_COLLISION_RADIUS, obstacles);
   x = resolved.x;
   z = resolved.z;
 
@@ -65,13 +68,21 @@ export function applyInputToState(
 export class PredictionBuffer {
   private pending: InputFrame[] = [];
   private state: PredictedState = { x: 0, z: 0, stamina: 100, sprintReady: true };
+  private arenaHalf = getMapDefinition('classic').arenaHalf;
+  private obstacles: Obstacle[] = getMapDefinition('classic').obstacles;
+
+  syncMap(mapId: MapId) {
+    const def = getMapDefinition(mapId);
+    this.arenaHalf = def.arenaHalf;
+    this.obstacles = def.obstacles;
+  }
 
   getState(): PredictedState {
     return { ...this.state };
   }
 
   applyInput(input: InputFrame): PredictedState {
-    this.state = applyInputToState(this.state, input);
+    this.state = applyInputToState(this.state, input, this.arenaHalf, this.obstacles);
     this.pending.push(input);
     return { ...this.state };
   }
@@ -93,7 +104,7 @@ export class PredictionBuffer {
 
     // Re-apply unprocessed inputs
     for (const input of this.pending) {
-      reconciled = applyInputToState(reconciled, input);
+      reconciled = applyInputToState(reconciled, input, this.arenaHalf, this.obstacles);
     }
 
     // Snap prevention: if divergence is huge, hard-snap; otherwise smooth

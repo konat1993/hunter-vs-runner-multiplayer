@@ -1,13 +1,12 @@
+import type { Obstacle } from '../../map-config';
 import type { PlayerState } from '../state/PlayerState';
 import {
-  OBSTACLES,
   PLAYER_COLLISION_RADIUS,
   resolveObstacleCollisions,
-} from './obstacles';
+} from '../../map-config';
 
 const WALK_SPEED = 6.0;
 const SPRINT_SPEED = 9.0;
-const ARENA_HALF = 15;
 
 interface InputPayload {
   seq: number;
@@ -21,6 +20,8 @@ export function applyMovement(
   player: PlayerState,
   input: InputPayload,
   dtMs: number,
+  arenaHalf: number,
+  obstacles: Obstacle[],
 ) {
   const dt = dtMs / 1000;
 
@@ -43,14 +44,14 @@ export function applyMovement(
   player.z += dirZ * speed * dt;
 
   // Clamp to arena
-  player.x = Math.max(-ARENA_HALF, Math.min(ARENA_HALF, player.x));
-  player.z = Math.max(-ARENA_HALF, Math.min(ARENA_HALF, player.z));
+  player.x = Math.max(-arenaHalf, Math.min(arenaHalf, player.x));
+  player.z = Math.max(-arenaHalf, Math.min(arenaHalf, player.z));
 
   const resolved = resolveObstacleCollisions(
     player.x,
     player.z,
     PLAYER_COLLISION_RADIUS,
-    OBSTACLES,
+    obstacles,
   );
   player.x = resolved.x;
   player.z = resolved.z;

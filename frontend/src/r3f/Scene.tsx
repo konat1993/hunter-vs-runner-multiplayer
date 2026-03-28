@@ -14,6 +14,7 @@ import { CLIENT_TICK_HZ, ENABLE_POSTPROCESSING } from "../game/perf";
 import { PredictionBuffer } from "../game/predict";
 import { sendInput } from "../game/net";
 import { CAMERA_POSITION } from "../game/camera";
+import { getMapDefinition, isValidMapId } from "../game/obstacles";
 import type { GameRoomStateSnapshot } from "../game/room-types";
 import type { Room } from "@colyseus/sdk";
 
@@ -85,15 +86,20 @@ function GameLoop({
 }
 
 export function Scene({ room }: SceneProps) {
-	const { localRole, localTransform, remotePlayers, phase } =
+	const { localRole, localTransform, remotePlayers, phase, mapId } =
 		useGameStore();
 	const localFacingRef = useRef(0);
+	const mapDef = getMapDefinition(mapId);
 
 	useEffect(() => {
 		// Reset prediction buffer on mount
 		inputSeq = 1;
 		predictionBuffer.reset(0, 0, 100, true);
 	}, []);
+
+	useEffect(() => {
+		predictionBuffer.syncMap(mapId);
+	}, [mapId]);
 
 	// Listen to server state updates for reconciliation
 	useEffect(() => {
@@ -103,7 +109,15 @@ export function Scene({ room }: SceneProps) {
 			const state = room.state as
 				| GameRoomStateSnapshot
 				| undefined;
-			if (!state?.players) return;
+			if (!state) return;
+
+			const mid = state.mapId;
+			if (mid && isValidMapId(mid)) {
+				useGameStore.getState().setMapId(mid);
+				predictionBuffer.syncMap(mid);
+			}
+
+			if (!state.players) return;
 			const currentLocalSessionId =
 				useGameStore.getState().localSessionId;
 			const seenRemoteSessionIds = new Set<string>();
@@ -173,7 +187,10 @@ export function Scene({ room }: SceneProps) {
 			<fog attach="fog" args={["#080810", 18, 42]} />
 			<CameraRig />
 			<Lights />
-			<Arena />
+			<Arena
+				arenaHalf={mapDef.arenaHalf}
+				obstacles={mapDef.obstacles}
+			/>
 
 			{/* Local player */}
 			{localRole && (

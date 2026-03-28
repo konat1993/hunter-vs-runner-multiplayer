@@ -1,5 +1,6 @@
 import { Client } from '@colyseus/sdk';
 import { config } from './config';
+import type { MapId } from '../game/obstacles';
 
 let _client: Client | null = null;
 
@@ -10,9 +11,13 @@ export function getColyseusClient(): Client {
   return _client;
 }
 
-export async function joinGameRoom(accessToken: string) {
+function roomNameForMap(mapId: MapId): string {
+  return `game_${mapId}`;
+}
+
+export async function joinGameRoom(accessToken: string, mapId: MapId) {
   const client = getColyseusClient();
-  return client.joinOrCreate('game', { accessToken });
+  return client.joinOrCreate(roomNameForMap(mapId), { accessToken });
 }
 
 export async function joinGameRoomById(roomId: string, accessToken: string) {

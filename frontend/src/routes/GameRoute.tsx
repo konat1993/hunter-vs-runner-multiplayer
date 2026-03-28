@@ -16,6 +16,7 @@ import {
   RENDERER_DPR_MAX,
   RENDERER_POWER_PREFERENCE,
 } from '../game/perf';
+import { isValidMapId } from '../game/obstacles';
 import type { GameOverMessage, GameRoomStateSnapshot } from '../game/room-types';
 
 export function GameRoute() {
@@ -23,8 +24,17 @@ export function GameRoute() {
   const { roomId } = useParams<{ roomId: string }>();
   const { session } = useAuthStore();
   const { room: matchmakingRoom, setRoom: setMatchmakingRoom } = useMatchmakingStore();
-  const { room, phase, reconnectMs, setRoom, setPhase, setTimers, setLocalSession, setEnded } =
-    useGameStore();
+  const {
+    room,
+    phase,
+    reconnectMs,
+    setRoom,
+    setMapId,
+    setPhase,
+    setTimers,
+    setLocalSession,
+    setEnded,
+  } = useGameStore();
 
   const activeRoom = room ?? matchmakingRoom;
 
@@ -74,6 +84,9 @@ export function GameRoute() {
     // Sync phase/timers from server state (player positions handled in Scene.tsx)
     const handleStateChange = (state: GameRoomStateSnapshot) => {
       if (!state) return;
+      if (state.mapId && isValidMapId(state.mapId)) {
+        setMapId(state.mapId);
+      }
       if (state.phase) setPhase(state.phase);
       setTimers(
         state.countdownMsRemaining ?? 3000,
@@ -99,7 +112,17 @@ export function GameRoute() {
       activeRoom.onStateChange.remove(handleStateChange);
       offGameOver();
     };
-  }, [activeRoom, navigate, roomId, session, setEnded, setLocalSession, setPhase, setTimers]);
+  }, [
+    activeRoom,
+    navigate,
+    roomId,
+    session,
+    setEnded,
+    setLocalSession,
+    setMapId,
+    setPhase,
+    setTimers,
+  ]);
 
   if (!activeRoom) {
     return null;

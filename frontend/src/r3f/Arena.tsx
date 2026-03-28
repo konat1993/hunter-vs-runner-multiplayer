@@ -1,9 +1,7 @@
-import { ARENA_HALF } from '../game/constants';
-import { OBSTACLES } from '../game/obstacles';
+import type { Obstacle } from '../game/obstacles';
 
 const WALL_HEIGHT = 1.2;
 const WALL_THICKNESS = 0.5;
-const FLOOR_SIZE = ARENA_HALF * 2;
 
 const wallColor = '#1e1e2e';
 const floorColor = '#111118';
@@ -19,53 +17,59 @@ function Wall({ position, args }: { position: [number, number, number]; args: [n
   );
 }
 
-export function Arena() {
+export interface ArenaProps {
+  arenaHalf: number;
+  obstacles: Obstacle[];
+}
+
+export function Arena({ arenaHalf, obstacles }: ArenaProps) {
+  const floorSize = arenaHalf * 2;
   const tileCount = 10;
-  const tileSize = FLOOR_SIZE / tileCount;
-  const pillarObstacles = OBSTACLES.filter((o) => o.kind === 'pillar');
-  const centerWalls = OBSTACLES.filter((o) => o.kind === 'wall');
+  const tileSize = floorSize / tileCount;
+  const pillarObstacles = obstacles.filter((o) => o.kind === 'pillar');
+  const centerWalls = obstacles.filter((o) => o.kind === 'wall');
 
   return (
     <group>
       {/* Floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[FLOOR_SIZE, FLOOR_SIZE]} />
+        <planeGeometry args={[floorSize, floorSize]} />
         <meshStandardMaterial color={floorColor} roughness={1} metalness={0} />
       </mesh>
 
       {/* Walls: North, South, East, West */}
       <Wall
-        position={[0, WALL_HEIGHT / 2, -ARENA_HALF - WALL_THICKNESS / 2]}
-        args={[FLOOR_SIZE + WALL_THICKNESS * 2, WALL_HEIGHT, WALL_THICKNESS]}
+        position={[0, WALL_HEIGHT / 2, -arenaHalf - WALL_THICKNESS / 2]}
+        args={[floorSize + WALL_THICKNESS * 2, WALL_HEIGHT, WALL_THICKNESS]}
       />
       <Wall
-        position={[0, WALL_HEIGHT / 2, ARENA_HALF + WALL_THICKNESS / 2]}
-        args={[FLOOR_SIZE + WALL_THICKNESS * 2, WALL_HEIGHT, WALL_THICKNESS]}
+        position={[0, WALL_HEIGHT / 2, arenaHalf + WALL_THICKNESS / 2]}
+        args={[floorSize + WALL_THICKNESS * 2, WALL_HEIGHT, WALL_THICKNESS]}
       />
       <Wall
-        position={[-ARENA_HALF - WALL_THICKNESS / 2, WALL_HEIGHT / 2, 0]}
-        args={[WALL_THICKNESS, WALL_HEIGHT, FLOOR_SIZE]}
+        position={[-arenaHalf - WALL_THICKNESS / 2, WALL_HEIGHT / 2, 0]}
+        args={[WALL_THICKNESS, WALL_HEIGHT, floorSize]}
       />
       <Wall
-        position={[ARENA_HALF + WALL_THICKNESS / 2, WALL_HEIGHT / 2, 0]}
-        args={[WALL_THICKNESS, WALL_HEIGHT, FLOOR_SIZE]}
+        position={[arenaHalf + WALL_THICKNESS / 2, WALL_HEIGHT / 2, 0]}
+        args={[WALL_THICKNESS, WALL_HEIGHT, floorSize]}
       />
 
       {/* Neon edge strips along wall tops */}
-      <mesh position={[0, WALL_HEIGHT + 0.02, -ARENA_HALF]}>
-        <boxGeometry args={[FLOOR_SIZE, 0.05, 0.05]} />
+      <mesh position={[0, WALL_HEIGHT + 0.02, -arenaHalf]}>
+        <boxGeometry args={[floorSize, 0.05, 0.05]} />
         <meshStandardMaterial color="#ff5010" emissive="#ff5010" emissiveIntensity={1.5} />
       </mesh>
-      <mesh position={[0, WALL_HEIGHT + 0.02, ARENA_HALF]}>
-        <boxGeometry args={[FLOOR_SIZE, 0.05, 0.05]} />
+      <mesh position={[0, WALL_HEIGHT + 0.02, arenaHalf]}>
+        <boxGeometry args={[floorSize, 0.05, 0.05]} />
         <meshStandardMaterial color="#00dcff" emissive="#00dcff" emissiveIntensity={1.5} />
       </mesh>
-      <mesh position={[-ARENA_HALF, WALL_HEIGHT + 0.02, 0]}>
-        <boxGeometry args={[0.05, 0.05, FLOOR_SIZE]} />
+      <mesh position={[-arenaHalf, WALL_HEIGHT + 0.02, 0]}>
+        <boxGeometry args={[0.05, 0.05, floorSize]} />
         <meshStandardMaterial color="#ff5010" emissive="#ff5010" emissiveIntensity={0.8} />
       </mesh>
-      <mesh position={[ARENA_HALF, WALL_HEIGHT + 0.02, 0]}>
-        <boxGeometry args={[0.05, 0.05, FLOOR_SIZE]} />
+      <mesh position={[arenaHalf, WALL_HEIGHT + 0.02, 0]}>
+        <boxGeometry args={[0.05, 0.05, floorSize]} />
         <meshStandardMaterial color="#00dcff" emissive="#00dcff" emissiveIntensity={0.8} />
       </mesh>
 
@@ -73,8 +77,8 @@ export function Arena() {
       {Array.from({ length: tileCount * tileCount }).map((_, i) => {
         const xi = i % tileCount;
         const zi = Math.floor(i / tileCount);
-        const tx = -ARENA_HALF + tileSize * 0.5 + xi * tileSize;
-        const tz = -ARENA_HALF + tileSize * 0.5 + zi * tileSize;
+        const tx = -arenaHalf + tileSize * 0.5 + xi * tileSize;
+        const tz = -arenaHalf + tileSize * 0.5 + zi * tileSize;
         const alt = (xi + zi) % 2 === 0;
 
         return (

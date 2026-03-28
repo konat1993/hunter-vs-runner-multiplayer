@@ -89,7 +89,16 @@ async function bootstrap() {
   });
 
   gameServer
-    .define('game', GameRoom, { supabase: supabaseService })
+    .define('game_classic', GameRoom, {
+      supabase: supabaseService,
+      mapId: 'classic',
+    })
+    .sortBy({ clients: -1, createdAt: 1 });
+  gameServer
+    .define('game_maze', GameRoom, {
+      supabase: supabaseService,
+      mapId: 'maze',
+    })
     .sortBy({ clients: -1, createdAt: 1 });
   await gameServer.listen(port);
 

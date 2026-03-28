@@ -7,6 +7,7 @@ import { updateStamina } from '../logic/stamina';
 import { CatchDetector } from '../logic/catch';
 import { getSpawnPositions } from '../logic/spawns';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { getMapDefinition, type MapId } from '../../map-config';
 
 interface InputPayload {
   seq: number;
@@ -43,6 +44,7 @@ export class GameRoom extends Room<{ state: GameState }> {
   private pendingInputs = new Map<string, InputPayload[]>();
   private lastInputBySession = new Map<string, InputPayload>();
   private countdownInterval: ReturnType<typeof setInterval> | null = null;
+  private mapId!: MapId;
 
   static getActiveRoomIdForUser(userId: string): string | null {
     const roomId = this.activeRoomByUserId.get(userId);
@@ -57,8 +59,12 @@ export class GameRoom extends Room<{ state: GameState }> {
     return roomId;
   }
 
-  onCreate(options: { supabase: SupabaseService }) {
+  onCreate(options: { supabase: SupabaseService; mapId: MapId }) {
     this.supabase = options.supabase;
+    this.mapId = options.mapId;
+    this.state.mapId = options.mapId;
+    const mapDef = getMapDefinition(this.mapId);
+    this.state.hunterCatchDistance = mapDef.hunterCatchDistance;
     this.state.phase = Phase.MATCHMAKING;
     GameRoom.roomById.set(this.roomId, this);
     console.log(`[GameRoom:${this.roomId}] created`);
@@ -221,7 +227,7 @@ export class GameRoom extends Room<{ state: GameState }> {
       sessionIds.push(sessionId),
     );
 
-    const spawns = getSpawnPositions();
+    const spawns = getSpawnPositions(this.mapId);
     const hunterIdx = Math.random() < 0.5 ? 0 : 1;
 
     sessionIds.forEach((sessionId, idx) => {
@@ -292,6 +298,8 @@ export class GameRoom extends Room<{ state: GameState }> {
 
     this.elapsedMs += dtMs;
 
+    const mapDef = getMapDefinition(this.mapId);
+
     this.state.players.forEach((player, sessionId) => {
       if (!player.connected) return;
 
@@ -307,12 +315,24 @@ export class GameRoom extends Room<{ state: GameState }> {
         for (const input of inputs) {
           const isMoving = input.dirX !== 0 || input.dirZ !== 0;
           updateStamina(player, input.sprint, isMoving, dtPerInput);
-          applyMovement(player, input, dtPerInput);
+          applyMovement(
+            player,
+            input,
+            dtPerInput,
+            mapDef.arenaHalf,
+            mapDef.obstacles,
+          );
         }
       } else if (latestInput) {
         const isMoving = latestInput.dirX !== 0 || latestInput.dirZ !== 0;
         updateStamina(player, latestInput.sprint, isMoving, dtMs);
-        applyMovement(player, latestInput, dtMs);
+        applyMovement(
+          player,
+          latestInput,
+          dtMs,
+          mapDef.arenaHalf,
+          mapDef.obstacles,
+        );
       } else {
         updateStamina(player, false, false, dtMs);
       }
