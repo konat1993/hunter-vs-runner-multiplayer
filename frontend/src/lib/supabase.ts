@@ -20,16 +20,25 @@ export async function sendEmailOtp(email: string) {
   });
 }
 
-export async function verifyEmailOtp(email: string, token: string) {
-  return supabase.auth.verifyOtp({
-    email,
-    token,
-    type: 'email',
-  });
-}
-
 export async function signOut() {
   return supabase.auth.signOut();
+}
+
+/** Maps Supabase Auth errors to clearer copy; rate limits are enforced server-side. */
+export function formatAuthErrorMessage(error: { message?: string } | null): string {
+  const raw = error?.message ?? '';
+  const lower = raw.toLowerCase();
+  if (
+    lower.includes('rate limit') ||
+    lower.includes('too many requests') ||
+    lower.includes('email rate limit')
+  ) {
+    return (
+      'Email send limit reached (Supabase Auth). Wait up to an hour, avoid repeated "Resend", ' +
+      'or in Supabase: Authentication → Rate Limits — raise OTP/email limits; built-in email also has an hourly cap (custom SMTP unlocks higher limits).'
+    );
+  }
+  return raw || 'Sign-in failed.';
 }
 
 export async function upsertUser(userId: string, email: string) {

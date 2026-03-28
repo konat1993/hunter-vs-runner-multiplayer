@@ -13,7 +13,7 @@ A real-time **2-player multiplayer 3D web game** where one player is the Hunter 
 | Routing | React Router DOM |
 | Styling | Tailwind CSS v4 (custom dark/neon theme) |
 | Backend | NestJS (DI/config modules) + Colyseus 0.17 (HTTP + WebSocket game server) |
-| Auth | Supabase Auth (Email OTP) |
+| Auth | Supabase Auth (email magic link) |
 | Database | Supabase Postgres |
 
 ---
@@ -32,7 +32,7 @@ A real-time **2-player multiplayer 3D web game** where one player is the Hunter 
 1. Go to [https://app.supabase.com](https://app.supabase.com) and create a new project.
 2. In the Supabase dashboard, go to **SQL Editor** and paste the entire contents of `docs/supabase-migration.sql`, then click **Run**. This creates the `users` and `game_results` tables, RLS policies, and helper RPC functions.
 3. Go to **Authentication → Providers** and make sure **Email** provider is enabled.
-4. Keep default OTP settings (or adjust OTP expiration if needed) in Email provider options.
+4. For a single login email (magic link only), turn **off** “Confirm email” / email confirmations so users are not sent a separate signup confirmation before the magic link.
 
 ---
 
