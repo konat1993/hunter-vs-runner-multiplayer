@@ -1,4 +1,5 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useLayoutEffect } from "react";
+import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { Arena } from "./Arena";
@@ -13,25 +14,39 @@ import {
 import { CLIENT_TICK_HZ, ENABLE_POSTPROCESSING } from "../game/perf";
 import { PredictionBuffer } from "../game/predict";
 import { sendInput } from "../game/net";
-import { CAMERA_POSITION } from "../game/camera";
+import { applyArenaFraming } from "../game/camera";
 import { getMapDefinition, isValidMapId } from "../game/obstacles";
 import type { GameRoomStateSnapshot } from "../game/room-types";
 import type { Room } from "@colyseus/sdk";
 
 interface SceneProps {
 	room: Room;
+	cameraZoom: number;
 }
 
 const predictionBuffer = new PredictionBuffer();
 let inputSeq = 1;
 const CLIENT_TICK_INTERVAL_MS = 1000 / CLIENT_TICK_HZ;
 
-function CameraRig() {
-	const { camera } = useThree();
-	useEffect(() => {
-		camera.position.set(...CAMERA_POSITION);
-		camera.lookAt(0, 0, 0);
-	}, [camera]);
+function CameraRig({
+	arenaHalf,
+	zoom,
+}: {
+	arenaHalf: number;
+	zoom: number;
+}) {
+	const { camera, size } = useThree();
+
+	useLayoutEffect(() => {
+		if (!(camera instanceof THREE.PerspectiveCamera)) return;
+		const aspect = size.width / Math.max(1, size.height);
+		applyArenaFraming(camera, {
+			arenaHalf,
+			aspect,
+			zoom,
+		});
+	}, [camera, size.width, size.height, arenaHalf, zoom]);
+
 	return null;
 }
 
@@ -85,7 +100,7 @@ function GameLoop({
 	return null;
 }
 
-export function Scene({ room }: SceneProps) {
+export function Scene({ room, cameraZoom }: SceneProps) {
 	const { localRole, localTransform, remotePlayers, phase, mapId } =
 		useGameStore();
 	const localFacingRef = useRef(0);
@@ -184,8 +199,9 @@ export function Scene({ room }: SceneProps) {
 	return (
 		<>
 			<color attach="background" args={["#080810"]} />
-			<fog attach="fog" args={["#080810", 18, 42]} />
-			<CameraRig />
+			{/* Wide fog so zoom-out / far corners are not swallowed (was 18–42 with camera far away). */}
+			<fog attach="fog" args={["#080810", 220, 900]} />
+			<CameraRig arenaHalf={mapDef.arenaHalf} zoom={cameraZoom} />
 			<Lights />
 			<Arena
 				arenaHalf={mapDef.arenaHalf}

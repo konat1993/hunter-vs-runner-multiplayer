@@ -242,9 +242,9 @@ export function HUD() {
 
       {/* Zone C — Stamina Bar (bottom left) */}
       <div
+        className="hud-stamina-panel"
         style={{
           position: 'absolute',
-          bottom: '24px',
           left: '20px',
           background: 'rgba(8,8,16,0.75)',
           backdropFilter: 'blur(8px)',

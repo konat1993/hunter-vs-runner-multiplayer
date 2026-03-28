@@ -197,3 +197,25 @@ html, body, #root {
   outline: 2px solid #a0a0ff;
   outline-offset: 2px;
 }
+
+/* Game HUD: slightly lift stamina on wide screens so it clears the playfield. */
+.hud-stamina-panel {
+  bottom: 24px;
+}
+
+@media (min-width: 769px) {
+  .hud-stamina-panel {
+    bottom: 32px;
+  }
+}
+
+/* Desktop-only camera zoom (+/−); matchmaking-style games are not mobile-first here. */
+.camera-zoom-controls {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .camera-zoom-controls {
+    display: flex;
+  }
+}

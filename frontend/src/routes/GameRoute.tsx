@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { useGameStore } from '../state/game.store';
@@ -10,7 +10,12 @@ import { Scene } from '../r3f/Scene';
 import { HUD } from '../ui/HUD';
 import { CountdownOverlay } from '../ui/CountdownOverlay';
 import { EndOverlay } from '../ui/EndOverlay';
-import { CAMERA_POSITION, CAMERA_FOV } from '../game/camera';
+import {
+  CAMERA_FOV,
+  CAMERA_POSITION,
+  CAMERA_ZOOM_STEP,
+  clampCameraZoom,
+} from '../game/camera';
 import {
   RENDERER_ANTIALIAS,
   RENDERER_DPR_MAX,
@@ -36,7 +41,31 @@ export function GameRoute() {
     setEnded,
   } = useGameStore();
 
+  const [cameraZoom, setCameraZoom] = useState(1);
+
   const activeRoom = room ?? matchmakingRoom;
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement).isContentEditable
+      ) {
+        return;
+      }
+      // + / = zoom in (closer); − / _ zoom out (farther).
+      if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        setCameraZoom((z) => clampCameraZoom(z - CAMERA_ZOOM_STEP));
+      } else if (e.key === '-' || e.key === '_') {
+        e.preventDefault();
+        setCameraZoom((z) => clampCameraZoom(z + CAMERA_ZOOM_STEP));
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   useEffect(() => {
     if (!session) return;
@@ -137,8 +166,68 @@ export function GameRoute() {
         shadows={false}
         dpr={[1, RENDERER_DPR_MAX]}
       >
-        <Scene room={activeRoom} />
+        <Scene room={activeRoom} cameraZoom={cameraZoom} />
       </Canvas>
+
+      {(phase === 'RUNNING' || phase === 'COUNTDOWN' || phase === 'PAUSED') && (
+        <div
+          className="camera-zoom-controls"
+          style={{
+            position: 'absolute',
+            right: 20,
+            bottom: 24,
+            zIndex: 15,
+            gap: 6,
+            pointerEvents: 'auto',
+            alignItems: 'center',
+          }}
+        >
+          <button
+            type="button"
+            className="focus-ring"
+            aria-label="Zoom out"
+            onClick={() =>
+              setCameraZoom((z) => clampCameraZoom(z + CAMERA_ZOOM_STEP))
+            }
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.15)',
+              background: 'rgba(8,8,16,0.8)',
+              color: '#f0f0fa',
+              fontSize: 22,
+              lineHeight: 1,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
+            −
+          </button>
+          <button
+            type="button"
+            className="focus-ring"
+            aria-label="Zoom in"
+            onClick={() =>
+              setCameraZoom((z) => clampCameraZoom(z - CAMERA_ZOOM_STEP))
+            }
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.15)',
+              background: 'rgba(8,8,16,0.8)',
+              color: '#f0f0fa',
+              fontSize: 22,
+              lineHeight: 1,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
+            +
+          </button>
+        </div>
+      )}
 
       {/* HUD overlays */}
       {(phase === 'RUNNING' || phase === 'COUNTDOWN' || phase === 'PAUSED') && <HUD />}
