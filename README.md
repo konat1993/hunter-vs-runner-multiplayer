@@ -2,6 +2,8 @@
 
 Real-time **2-player 3D browser game**: one player is the **Hunter** (catch the Runner before time runs out), the other is the **Runner** (survive **2 minutes**). Built as a portfolio-grade full-stack project with authoritative server simulation, Supabase authentication, and a React Three Fiber client.
 
+**Live demo:** [hunter-vs-runner-multiplayer.vercel.app](https://hunter-vs-runner-multiplayer.vercel.app/)
+
 ---
 
 ## Highlights (for reviewers)
@@ -49,16 +51,16 @@ flowchart LR
 
 ## Tech stack
 
-| Layer | Technology |
-| --- | --- |
-| Frontend | Vite, React, TypeScript |
-| 3D | React Three Fiber, `@react-three/drei`, `@react-three/postprocessing` |
-| Realtime client | Colyseus.js |
-| State | Zustand |
-| Routing | React Router |
-| Styling | Tailwind CSS v4 (dark / neon theme) |
-| Backend | NestJS (bootstrap, DI) + Colyseus 0.17 (HTTP + WebSocket) |
-| Auth & DB | Supabase Auth + Postgres |
+| Layer           | Technology                                                            |
+| --------------- | --------------------------------------------------------------------- |
+| Frontend        | Vite, React, TypeScript                                               |
+| 3D              | React Three Fiber, `@react-three/drei`, `@react-three/postprocessing` |
+| Realtime client | Colyseus.js                                                           |
+| State           | Zustand                                                               |
+| Routing         | React Router                                                          |
+| Styling         | Tailwind CSS v4 (dark / neon theme)                                   |
+| Backend         | NestJS (bootstrap, DI) + Colyseus 0.17 (HTTP + WebSocket)             |
+| Auth & DB       | Supabase Auth + Postgres                                              |
 
 ---
 
@@ -129,13 +131,13 @@ cd frontend
 cp .env.example .env
 ```
 
-| Variable | Purpose |
-| --- | --- |
-| `VITE_SUPABASE_URL` | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Public anon key |
-| `VITE_COLYSEUS_ENDPOINT` | WebSocket URL of the game server (`ws://` dev, `wss://` production HTTPS) |
+| Variable                     | Purpose                                                                                                                                                                                                          |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_SUPABASE_URL`          | Supabase project URL                                                                                                                                                                                             |
+| `VITE_SUPABASE_ANON_KEY`     | Public anon key                                                                                                                                                                                                  |
+| `VITE_COLYSEUS_ENDPOINT`     | WebSocket URL of the game server (`ws://` dev, `wss://` production HTTPS)                                                                                                                                        |
 | `VITE_BACKEND_HTTP_ENDPOINT` | HTTP base URL for REST routes on the same host (e.g. `http://localhost:2567`). Used for `/session/active-game`. If omitted, it is derived from `VITE_COLYSEUS_ENDPOINT` by swapping `ws`→`http` / `wss`→`https`. |
-| `VITE_SITE_URL` | Public site URL (OAuth / magic-link redirects), e.g. `http://localhost:5173` |
+| `VITE_SITE_URL`              | Public site URL (OAuth / magic-link redirects), e.g. `http://localhost:5173`                                                                                                                                     |
 
 Example **local development**:
 
@@ -154,13 +156,13 @@ cd backend
 cp .env.example .env
 ```
 
-| Variable | Purpose |
-| --- | --- |
-| `NODE_ENV` | `development` or `production` |
-| `PORT` | Listen port (default `2567`) |
-| `CORS_ORIGIN` | Allowed browser origin(s), comma-separated. Supports patterns like `https://*.vercel.app`. |
-| `SUPABASE_URL` | Same project URL as the frontend |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server only) |
+| Variable                    | Purpose                                                                                    |
+| --------------------------- | ------------------------------------------------------------------------------------------ |
+| `NODE_ENV`                  | `development` or `production`                                                              |
+| `PORT`                      | Listen port (default `2567`)                                                               |
+| `CORS_ORIGIN`               | Allowed browser origin(s), comma-separated. Supports patterns like `https://*.vercel.app`. |
+| `SUPABASE_URL`              | Same project URL as the frontend                                                           |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server only)                                                             |
 
 Example **local development**:
 
@@ -276,14 +278,14 @@ docker compose down
 
 ## Game rules
 
-| | |
-| --- | --- |
-| Roles | Hunter (warm colors) vs Runner (cool colors) |
-| Controls | WASD move, **Shift** sprint (stamina) |
-| Match length | 2:00 |
-| Catch | Hunter within range for a short window (server-side) |
-| Win | Hunter catches Runner → Hunter wins; timer hits 0 → Runner wins |
-| Matchmaking | Real-time queue, limited wait |
+|              |                                                                 |
+| ------------ | --------------------------------------------------------------- |
+| Roles        | Hunter (warm colors) vs Runner (cool colors)                    |
+| Controls     | WASD move, **Shift** sprint (stamina)                           |
+| Match length | 2:00                                                            |
+| Catch        | Hunter within range for a short window (server-side)            |
+| Win          | Hunter catches Runner → Hunter wins; timer hits 0 → Runner wins |
+| Matchmaking  | Real-time queue, limited wait                                   |
 
 ---
 
