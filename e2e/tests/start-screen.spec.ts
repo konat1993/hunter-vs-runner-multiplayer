@@ -1,4 +1,12 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+/** Wait until auth init finished and unauthenticated start screen is interactive. */
+async function waitForStartScreen(page: Page) {
+  await expect(page.getByTestId('game-title')).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId('email-login-submit')).toBeVisible({
+    timeout: 10000,
+  });
+}
 
 test.describe('Start Screen (unauthenticated)', () => {
   test('renders without crash and shows game title', async ({ page }) => {
@@ -9,103 +17,77 @@ test.describe('Start Screen (unauthenticated)', () => {
     page.on('pageerror', (err) => consoleErrors.push(`PAGE ERROR: ${err.message}`));
 
     await page.goto('/');
+    await waitForStartScreen(page);
 
-    // Wait for app to initialize (spinner disappears)
-    await page.waitForFunction(() => {
-      const spinners = document.querySelectorAll('.animate-spin');
-      return spinners.length === 0 || document.title !== '';
-    }, { timeout: 10000 });
+    await expect(page.getByTestId('game-title-hunter')).toHaveText('HUNTER');
+    await expect(page.getByTestId('game-title-runner')).toHaveText('RUNNER');
 
-    // Wait for start screen to be visible (with or without spinner gone)
-    await page.waitForTimeout(3000);
-
-    // Take screenshot
-    await page.screenshot({ path: '../test-screenshots/start-screen.png', fullPage: true });
-
-    // Game title check — HUNTER / VS / RUNNER spans
-    const bodyText = await page.textContent('body');
-    expect(bodyText).toContain('HUNTER');
-    expect(bodyText).toContain('RUNNER');
-
-    // Sign in button should be visible (unauthenticated state)
-    const signinBtn = page.locator('button', { hasText: /SIGN IN WITH GOOGLE/i });
-    await expect(signinBtn).toBeVisible({ timeout: 5000 });
+    const loginBtn = page.getByTestId('email-login-submit');
+    await expect(loginBtn).toBeVisible();
+    await expect(loginBtn).toContainText(/EMAIL LOGIN LINK/i);
   });
 
   test('dark background is applied', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(3000);
+    await waitForStartScreen(page);
 
     const bgColor = await page.evaluate(() => {
       return window.getComputedStyle(document.body).backgroundColor;
     });
-    // Background should be dark (#080810 = rgb(8, 8, 16))
     expect(bgColor).toBe('rgb(8, 8, 16)');
   });
 
   test('HUNTER text has orange/red color', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(3000);
+    await waitForStartScreen(page);
 
-    // Find HUNTER span by looking at text content  
-    const hunterText = page.locator('h1 span').first();
-    await expect(hunterText).toBeVisible({ timeout: 5000 });
-    
+    const hunterText = page.getByTestId('game-title-hunter');
     const color = await hunterText.evaluate((el) => {
       return window.getComputedStyle(el).color;
     });
-    // Hunter color is #ff5010 = rgb(255, 80, 16)
     expect(color).toBe('rgb(255, 80, 16)');
   });
 
   test('RUNNER text has cyan color', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(3000);
+    await waitForStartScreen(page);
 
-    const spans = page.locator('h1 span');
-    const count = await spans.count();
-    // Should have 3 spans: HUNTER, VS, RUNNER
-    expect(count).toBeGreaterThanOrEqual(2);
-
-    // Last span is RUNNER
-    const runnerText = spans.last();
+    const runnerText = page.getByTestId('game-title-runner');
     const color = await runnerText.evaluate((el) => {
       return window.getComputedStyle(el).color;
     });
-    // Runner color is #00dcff = rgb(0, 220, 255)
     expect(color).toBe('rgb(0, 220, 255)');
   });
 
   test('no critical JavaScript errors on page load', async ({ page }) => {
     const criticalErrors: string[] = [];
-    
+
     page.on('pageerror', (err) => {
-      // Ignore Supabase auth errors (expected with placeholder credentials)
-      if (!err.message.includes('supabase') && 
-          !err.message.includes('fetch') &&
-          !err.message.includes('network') &&
-          !err.message.includes('Failed to fetch') &&
-          !err.message.includes('NetworkError') &&
-          !err.message.includes('AuthRetryableFetchError')) {
+      if (
+        !err.message.includes('supabase') &&
+        !err.message.includes('fetch') &&
+        !err.message.includes('network') &&
+        !err.message.includes('Failed to fetch') &&
+        !err.message.includes('NetworkError') &&
+        !err.message.includes('AuthRetryableFetchError')
+      ) {
         criticalErrors.push(err.message);
       }
     });
 
     await page.goto('/');
-    await page.waitForTimeout(3000);
+    await waitForStartScreen(page);
 
     expect(criticalErrors).toHaveLength(0);
   });
 
-  test('sign-in button has neon-runner styling', async ({ page }) => {
+  test('email login button has neon-runner styling', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(3000);
+    await waitForStartScreen(page);
 
-    const signinBtn = page.locator('button', { hasText: /SIGN IN WITH GOOGLE/i });
-    await expect(signinBtn).toBeVisible({ timeout: 5000 });
-
-    const hasClass = await signinBtn.evaluate((el) =>
-      el.classList.contains('btn-neon-runner')
+    const loginBtn = page.getByTestId('email-login-submit');
+    const hasClass = await loginBtn.evaluate((el) =>
+      el.classList.contains('btn-neon-runner'),
     );
     expect(hasClass).toBe(true);
   });
@@ -114,42 +96,29 @@ test.describe('Start Screen (unauthenticated)', () => {
 test.describe('Navigation redirects (unauthenticated)', () => {
   test('/matchmaking redirects to / when not signed in', async ({ page }) => {
     await page.goto('/matchmaking');
-    await page.waitForTimeout(2000);
-    
-    // Should redirect to /
-    expect(page.url()).toContain('localhost:5173/');
-    // Should see the start screen
-    const bodyText = await page.textContent('body');
-    expect(bodyText).toContain('HUNTER');
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByTestId('game-title')).toBeVisible({ timeout: 15000 });
   });
 
   test('/game redirects to / when not signed in', async ({ page }) => {
     await page.goto('/game');
-    await page.waitForTimeout(2000);
-
-    // Should redirect to /
-    expect(page.url()).toContain('localhost:5173/');
-    const bodyText = await page.textContent('body');
-    expect(bodyText).toContain('HUNTER');
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByTestId('game-title')).toBeVisible({ timeout: 15000 });
   });
 
   test('unknown routes redirect to /', async ({ page }) => {
     await page.goto('/some-unknown-path');
-    await page.waitForTimeout(2000);
-
-    expect(page.url()).toContain('localhost:5173/');
+    await expect(page).toHaveURL(/\/$/);
   });
 });
 
 test.describe('Auth Callback Route', () => {
-  test('/auth/callback renders loading spinner', async ({ page }) => {
+  test('/auth/callback shows signing state or returns to start', async ({
+    page,
+  }) => {
     await page.goto('/auth/callback');
-    await page.waitForTimeout(1000);
-
-    // Should show the spinner or redirect to /
-    const bodyText = await page.textContent('body');
-    // Either shows callback page or redirects to start
-    const hasContent = bodyText !== null && bodyText.length > 0;
-    expect(hasContent).toBe(true);
+    const signing = page.getByText(/Signing you in/i);
+    const homeTitle = page.getByTestId('game-title');
+    await expect(signing.or(homeTitle)).toBeVisible({ timeout: 15000 });
   });
 });

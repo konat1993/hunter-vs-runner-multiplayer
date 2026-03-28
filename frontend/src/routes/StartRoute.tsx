@@ -223,6 +223,7 @@ export function StartRoute() {
 			>
 				{/* Game Title */}
 				<h1
+					data-testid="game-title"
 					style={{
 						fontFamily: '"Rajdhani", system-ui, sans-serif',
 						fontSize: "40px",
@@ -234,6 +235,7 @@ export function StartRoute() {
 					}}
 				>
 					<span
+						data-testid="game-title-hunter"
 						style={{
 							color: "#ff5010",
 							textShadow: "0 0 10px rgba(255,80,16,0.8)",
@@ -241,10 +243,11 @@ export function StartRoute() {
 					>
 						HUNTER
 					</span>{" "}
-					<span style={{ color: "#f0f0fa" }}>
+					<span data-testid="game-title-vs" style={{ color: "#f0f0fa" }}>
 						VS
 					</span>{" "}
 					<span
+						data-testid="game-title-runner"
 						style={{
 							color: "#00dcff",
 							textShadow: "0 0 10px rgba(0,220,255,0.8)",
@@ -560,6 +563,8 @@ export function StartRoute() {
 							/>
 
 							<button
+								type="button"
+								data-testid="email-login-submit"
 								className="btn-neon-runner focus-ring"
 								onClick={handleSignIn}
 								disabled={authLoading}
