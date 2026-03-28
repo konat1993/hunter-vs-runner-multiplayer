@@ -16,6 +16,11 @@ export type MapId = 'classic' | 'maze';
 
 export const MAP_IDS: MapId[] = ['classic', 'maze'];
 
+/** Uniform scale vs original 15m half-extent layout (30% smaller playfield). */
+export const ARENA_WORLD_SCALE = 0.7;
+
+const ARENA_HALF_BASE = 15;
+
 export interface MapDefinition {
   id: MapId;
   label: string;
@@ -28,7 +33,19 @@ export interface MapDefinition {
   hunterCatchDistance: number;
 }
 
-const CLASSIC_OBSTACLES: Obstacle[] = [
+function scaleObstacle(o: Obstacle): Obstacle {
+  const s = ARENA_WORLD_SCALE;
+  return {
+    kind: o.kind,
+    x: o.x * s,
+    z: o.z * s,
+    halfW: o.halfW * s,
+    halfD: o.halfD * s,
+  };
+}
+
+/** Coordinates in pre-scale “design” space (15m half arena). */
+const CLASSIC_OBSTACLES_RAW: Obstacle[] = [
   { kind: 'pillar', x: -8, z: -2, halfW: 0.45, halfD: 0.45 },
   { kind: 'pillar', x: 8, z: 2, halfW: 0.45, halfD: 0.45 },
   { kind: 'pillar', x: -2, z: 8, halfW: 0.45, halfD: 0.45 },
@@ -39,27 +56,24 @@ const CLASSIC_OBSTACLES: Obstacle[] = [
   { kind: 'wall', x: 6, z: 0, halfW: 0.3, halfD: 3.5 },
 ];
 
+const CLASSIC_OBSTACLES: Obstacle[] = CLASSIC_OBSTACLES_RAW.map(scaleObstacle);
+
 /** Maze-like center, open corners / outer ring for chases. */
-const MAZE_OBSTACLES: Obstacle[] = [
+const MAZE_OBSTACLES_RAW: Obstacle[] = [
   { kind: 'pillar', x: -13, z: -13, halfW: 0.45, halfD: 0.45 },
   { kind: 'pillar', x: 13, z: 13, halfW: 0.45, halfD: 0.45 },
   { kind: 'pillar', x: -13, z: 13, halfW: 0.45, halfD: 0.45 },
   { kind: 'pillar', x: 13, z: -13, halfW: 0.45, halfD: 0.45 },
-  // North row
   { kind: 'wall', x: -6, z: -10, halfW: 3.2, halfD: 0.3 },
   { kind: 'wall', x: 6, z: -10, halfW: 3.2, halfD: 0.3 },
   { kind: 'wall', x: 0, z: -10, halfW: 1.2, halfD: 0.3 },
-  // South row
   { kind: 'wall', x: -6, z: 10, halfW: 3.2, halfD: 0.3 },
   { kind: 'wall', x: 6, z: 10, halfW: 3.2, halfD: 0.3 },
   { kind: 'wall', x: 0, z: 10, halfW: 1.2, halfD: 0.3 },
-  // West column
   { kind: 'wall', x: -10, z: -5, halfW: 0.3, halfD: 2.8 },
   { kind: 'wall', x: -10, z: 5, halfW: 0.3, halfD: 2.8 },
-  // East column
   { kind: 'wall', x: 10, z: -5, halfW: 0.3, halfD: 2.8 },
   { kind: 'wall', x: 10, z: 5, halfW: 0.3, halfD: 2.8 },
-  // Inner maze core
   { kind: 'wall', x: -4, z: -4, halfW: 2.8, halfD: 0.3 },
   { kind: 'wall', x: 4, z: -4, halfW: 2.8, halfD: 0.3 },
   { kind: 'wall', x: -4, z: 4, halfW: 2.8, halfD: 0.3 },
@@ -71,28 +85,29 @@ const MAZE_OBSTACLES: Obstacle[] = [
   { kind: 'wall', x: 0, z: 4, halfW: 2.6, halfD: 0.3 },
 ];
 
+const MAZE_OBSTACLES: Obstacle[] = MAZE_OBSTACLES_RAW.map(scaleObstacle);
+
+function scaleSpawn(p: { x: number; z: number }): { x: number; z: number } {
+  const s = ARENA_WORLD_SCALE;
+  return { x: p.x * s, z: p.z * s };
+}
+
 const MAPS: Record<MapId, MapDefinition> = {
   classic: {
     id: 'classic',
     label: 'Arena',
-    arenaHalf: 15,
+    arenaHalf: ARENA_HALF_BASE * ARENA_WORLD_SCALE,
     obstacles: CLASSIC_OBSTACLES,
-    spawns: [
-      { x: -8, z: -8 },
-      { x: 8, z: 8 },
-    ],
+    spawns: [scaleSpawn({ x: -8, z: -8 }), scaleSpawn({ x: 8, z: 8 })],
     hunterCatchDistance: 1.2,
   },
   maze: {
     id: 'maze',
     label: 'Labyrinth',
     queueHint: 'Fewer players on this map — matchmaking may take longer.',
-    arenaHalf: 15,
+    arenaHalf: ARENA_HALF_BASE * ARENA_WORLD_SCALE,
     obstacles: MAZE_OBSTACLES,
-    spawns: [
-      { x: -11, z: -11 },
-      { x: 11, z: 11 },
-    ],
+    spawns: [scaleSpawn({ x: -11, z: -11 }), scaleSpawn({ x: 11, z: 11 })],
     hunterCatchDistance: 1.15,
   },
 };

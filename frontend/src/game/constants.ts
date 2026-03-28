@@ -5,7 +5,8 @@ export const STAMINA_DRAIN_PER_SEC = 25;
 export const STAMINA_REGEN_PER_SEC = 15;
 export const SPRINT_MIN_STAMINA = 0;
 export const CATCH_DISTANCE = 1.2;
-export const ARENA_HALF = 15;
+/** Matches default map `arenaHalf` after `ARENA_WORLD_SCALE` in map-config (legacy reference). */
+export const ARENA_HALF = 10.5;
 export const MATCH_DURATION_MS = 120000;
 export const COUNTDOWN_MS = 3000;
 export const TICK_RATE_HZ = 60;
