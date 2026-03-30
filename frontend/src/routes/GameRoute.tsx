@@ -122,7 +122,6 @@ export function GameRoute() {
         state.matchMsRemaining ?? 120000,
         state.reconnectMsRemaining ?? 0,
       );
-
       // Sync local session/role once
       state.players?.forEach((player, sessionId) => {
         if (sessionId === activeRoom.sessionId) {

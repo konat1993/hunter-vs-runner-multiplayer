@@ -8,7 +8,15 @@ export function HUD() {
   const navigate = useNavigate();
   const [showGuide, setShowGuide] = useState(false);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
-  const { room, phase, localRole, localTransform, matchMs, reconnectMs, reset } = useGameStore();
+  const {
+    room,
+    phase,
+    localRole,
+    localTransform,
+    matchMs,
+    reconnectMs,
+    reset,
+  } = useGameStore();
   const hudZ = phase === 'PAUSED' ? 25 : 10;
   const stamina = localTransform.stamina;
   const sprintReady = localTransform.sprintReady;
@@ -187,10 +195,10 @@ export function HUD() {
             How to play
           </h3>
           <p style={{ margin: 0, marginBottom: '8px', fontSize: '13px', color: '#a5a5c2' }}>
-            <strong>Hunter</strong>: catch Runner before timer ends.
+            <strong>Hunter</strong>: catch the Runner before the timer ends.
           </p>
           <p style={{ margin: 0, marginBottom: '12px', fontSize: '13px', color: '#a5a5c2' }}>
-            <strong>Runner</strong>: survive until timer reaches 0.
+            <strong>Runner</strong>: survive until the timer reaches 0.
           </p>
           <p style={{ margin: 0, fontSize: '13px', color: '#f0f0fa' }}><strong>Move:</strong> WASD / Arrow keys</p>
           <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#f0f0fa' }}><strong>Sprint:</strong> Hold Shift</p>

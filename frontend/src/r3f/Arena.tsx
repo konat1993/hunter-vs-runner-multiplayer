@@ -92,9 +92,16 @@ export interface ArenaProps {
   arenaHalf: number;
   obstacles: Obstacle[];
   mapId?: MapId;
+  /** Maze: subtle floor tint for the exposed double-wide strip. */
+  riskyCorridor?: { x: number; z: number; halfW: number; halfD: number };
 }
 
-export function Arena({ arenaHalf, obstacles, mapId = 'classic' }: ArenaProps) {
+export function Arena({
+  arenaHalf,
+  obstacles,
+  mapId = 'classic',
+  riskyCorridor,
+}: ArenaProps) {
   const floorSize = arenaHalf * 2;
   const tileCount = mapId === 'maze' ? 12 : 10;
   const tileSize = floorSize / tileCount;
@@ -175,6 +182,22 @@ export function Arena({ arenaHalf, obstacles, mapId = 'classic' }: ArenaProps) {
         colorNorthSouth={CYAN}
         colorEastWest={CYAN}
       />
+
+      {riskyCorridor && mapId === 'maze' ? (
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[riskyCorridor.x, 0.022, riskyCorridor.z]}
+        >
+          <planeGeometry args={[riskyCorridor.halfW * 2, riskyCorridor.halfD * 2]} />
+          <meshStandardMaterial
+            color="#6a5048"
+            roughness={0.94}
+            metalness={0.05}
+            transparent
+            opacity={0.55}
+          />
+        </mesh>
+      ) : null}
 
       {Array.from({ length: tileCount * tileCount }).map((_, i) => {
         const xi = i % tileCount;

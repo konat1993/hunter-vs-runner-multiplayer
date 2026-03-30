@@ -124,7 +124,6 @@ export function MatchmakingRoute() {
 								120000,
 							state.reconnectMsRemaining ?? 0,
 						);
-
 						let playerCount = 0;
 						state.players?.forEach(() => {
 							playerCount += 1;

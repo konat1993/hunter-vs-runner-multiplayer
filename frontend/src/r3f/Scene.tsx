@@ -221,6 +221,7 @@ export function Scene({ room, cameraZoom }: SceneProps) {
 				arenaHalf={mapDef.arenaHalf}
 				obstacles={mapDef.obstacles}
 				mapId={mapId}
+				riskyCorridor={mapDef.riskyCorridor}
 			/>
 
 			{/* Local player */}

@@ -29,6 +29,6 @@ describe('map-config maze layout', () => {
       0.38,
     );
     expect(steps).not.toBeNull();
-    expect(steps!).toBeGreaterThan(18);
+    expect(steps!).toBeGreaterThan(12);
   });
 });

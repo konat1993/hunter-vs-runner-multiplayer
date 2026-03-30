@@ -104,20 +104,88 @@ function carveMaze(cols: number, rows: number, rng: () => number): boolean[][][]
   return w;
 }
 
+/** Multiple openings per edge so each side has clear entrances (not only mid). */
 function openBoundaryGates(
   w: boolean[][][],
   cols: number,
   rows: number,
 ): void {
-  const mj = Math.floor(rows / 2);
-  const mi = Math.floor(cols / 2);
-  if (mj >= 0 && mj < rows) {
-    w[0]![mj]![3] = false;
-    w[cols - 1]![mj]![1] = false;
+  const jOpenings = [
+    Math.floor(rows / 4),
+    Math.floor(rows / 2),
+    Math.floor((3 * rows) / 4),
+  ];
+  const iOpenings = [
+    Math.floor(cols / 4),
+    Math.floor(cols / 2),
+    Math.floor((3 * cols) / 4),
+  ];
+  for (const mj of jOpenings) {
+    if (mj >= 0 && mj < rows) {
+      w[0]![mj]![3] = false;
+      w[cols - 1]![mj]![1] = false;
+    }
   }
-  if (mi >= 0 && mi < cols) {
-    w[mi]![0]![2] = false;
-    w[mi]![rows - 1]![0] = false;
+  for (const mi of iOpenings) {
+    if (mi >= 0 && mi < cols) {
+      w[mi]![0]![2] = false;
+      w[mi]![rows - 1]![0] = false;
+    }
+  }
+}
+
+/** Carve a few extra passages in the central band (deterministic after carveMaze RNG state). */
+function openCenterShortcuts(
+  w: boolean[][][],
+  cols: number,
+  rows: number,
+  rng: () => number,
+): void {
+  const midI = Math.floor(cols / 2);
+  const midJ = Math.floor(rows / 2);
+  const candidates: { ci: number; cj: number; d: Dir }[] = [];
+  for (let di = -2; di <= 2; di++) {
+    for (let dj = -2; dj <= 2; dj++) {
+      if (Math.abs(di) + Math.abs(dj) > 3) continue;
+      const ci = midI + di;
+      const cj = midJ + dj;
+      if (ci < 0 || ci >= cols || cj < 0 || cj >= rows) continue;
+      for (const d of [0, 1, 2, 3] as const) {
+        const nb = neighbor(ci, cj, d);
+        if (!nb) continue;
+        const [ni, nj] = nb;
+        if (ni < 0 || ni >= cols || nj < 0 || nj >= rows) continue;
+        candidates.push({ ci, cj, d });
+      }
+    }
+  }
+  shuffleInPlace(candidates, rng);
+  const openCount = 3;
+  for (let k = 0; k < Math.min(openCount, candidates.length); k++) {
+    const { ci, cj, d } = candidates[k]!;
+    const nb = neighbor(ci, cj, d);
+    if (!nb) continue;
+    const [ni, nj] = nb;
+    w[ci]![cj]![d] = false;
+    w[ni]![nj]![opposite(d)] = false;
+  }
+}
+
+/** Two-cell-wide horizontal strip through map center — fast but exposed (fewer corners). */
+function openRiskyWidePassage(
+  w: boolean[][][],
+  cols: number,
+  rows: number,
+): void {
+  const mi = Math.floor(cols / 2);
+  const mj = Math.floor(rows / 2);
+  if (mi - 1 >= 0 && mi < cols) {
+    w[mi - 1]![mj]![1] = false;
+    w[mi]![mj]![3] = false;
+  }
+  if (mi + 1 < cols) {
+    w[mi]![mj]![1] = false;
+    w[mi + 1]![mj]![3] = false;
   }
 }
 
@@ -196,6 +264,28 @@ const MAZE_PILLARS_RAW: RawObstacle[] = [
   { kind: 'pillar', x: 13, z: -13, halfW: 0.45, halfD: 0.45 },
 ];
 
+/** Floor highlight region in design space (risky wide strip) for client tint. */
+export function generateMazeRiskyCorridorRaw(
+  cols: number,
+  rows: number,
+  cellSize: number,
+): { x: number; z: number; halfW: number; halfD: number } {
+  const halfW = cols * cellSize * 0.5;
+  const halfH = rows * cellSize * 0.5;
+  const minX = -halfW;
+  const minZ = -halfH;
+  const mi = Math.floor(cols / 2);
+  const mj = Math.floor(rows / 2);
+  const cx = minX + (mi + 0.5) * cellSize;
+  const cz = minZ + (mj + 0.5) * cellSize;
+  return {
+    x: cx,
+    z: cz,
+    halfW: cellSize * 1.25,
+    halfD: cellSize * 0.45,
+  };
+}
+
 export function generateMazeObstaclesRaw(
   params?: Partial<MazeGeneratorParams>,
 ): RawObstacle[] {
@@ -206,6 +296,8 @@ export function generateMazeObstaclesRaw(
   const rng = mulberry32(seed);
   const w = carveMaze(cols, rows, rng);
   openBoundaryGates(w, cols, rows);
+  openCenterShortcuts(w, cols, rows, rng);
+  openRiskyWidePassage(w, cols, rows);
   const walls = wallSegmentsToObstacles(w, cols, rows, cellSize);
   return [...MAZE_PILLARS_RAW, ...walls];
 }

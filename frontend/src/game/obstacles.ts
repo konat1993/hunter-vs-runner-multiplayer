@@ -2,6 +2,7 @@
 export type { MapDefinition, MapId, Obstacle } from '@map-config';
 export {
   getMapDefinition,
+  isDiscClearOfObstacles,
   isValidMapId,
   MAP_IDS,
   PLAYER_COLLISION_RADIUS,

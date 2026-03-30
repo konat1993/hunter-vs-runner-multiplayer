@@ -2,7 +2,10 @@
  * Single source for arena layout, spawns, and collision (server + client via Vite alias).
  */
 
-import { generateMazeObstaclesRaw } from './maze-generator';
+import {
+  generateMazeObstaclesRaw,
+  generateMazeRiskyCorridorRaw,
+} from './maze-generator';
 
 export interface Obstacle {
   kind: 'pillar' | 'wall';
@@ -13,6 +16,10 @@ export interface Obstacle {
 }
 
 export const PLAYER_COLLISION_RADIUS = 0.3;
+
+const MAZE_GRID_COLS = 11;
+const MAZE_GRID_ROWS = 11;
+const MAZE_CELL_SIZE = 1.38;
 
 export type MapId = 'classic' | 'maze';
 
@@ -33,6 +40,8 @@ export interface MapDefinition {
   /** Index 0 / 1 — hunter randomization uses these positions. */
   spawns: [{ x: number; z: number }, { x: number; z: number }];
   hunterCatchDistance: number;
+  /** Optional floor tint region for the exposed shortcut strip (maze). */
+  riskyCorridor?: { x: number; z: number; halfW: number; halfD: number };
 }
 
 function scaleObstacle(o: Obstacle): Obstacle {
@@ -65,9 +74,56 @@ const MAZE_OBSTACLES_RAW: Obstacle[] = generateMazeObstaclesRaw().map((o) => ({ 
 
 const MAZE_OBSTACLES: Obstacle[] = MAZE_OBSTACLES_RAW.map(scaleObstacle);
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+/** Disc vs axis-aligned rectangle — for spawn checks and grid BFS. */
+export function isDiscClearOfObstacles(
+  x: number,
+  z: number,
+  radius: number,
+  obstacles: Obstacle[],
+): boolean {
+  for (const obs of obstacles) {
+    const minX = obs.x - obs.halfW;
+    const maxX = obs.x + obs.halfW;
+    const minZ = obs.z - obs.halfD;
+    const maxZ = obs.z + obs.halfD;
+    const closestX = clamp(x, minX, maxX);
+    const closestZ = clamp(z, minZ, maxZ);
+    const dx = x - closestX;
+    const dz = z - closestZ;
+    if (dx * dx + dz * dz < radius * radius) return false;
+  }
+  return true;
+}
+
+const MAZE_RISKY_RAW = generateMazeRiskyCorridorRaw(
+  MAZE_GRID_COLS,
+  MAZE_GRID_ROWS,
+  MAZE_CELL_SIZE,
+);
+const MAZE_RISKY = scaleRiskyCorridor(MAZE_RISKY_RAW);
+
 function scaleSpawn(p: { x: number; z: number }): { x: number; z: number } {
   const s = ARENA_WORLD_SCALE;
   return { x: p.x * s, z: p.z * s };
+}
+
+function scaleRiskyCorridor(raw: {
+  x: number;
+  z: number;
+  halfW: number;
+  halfD: number;
+}): { x: number; z: number; halfW: number; halfD: number } {
+  const s = ARENA_WORLD_SCALE;
+  return {
+    x: raw.x * s,
+    z: raw.z * s,
+    halfW: raw.halfW * s,
+    halfD: raw.halfD * s,
+  };
 }
 
 const MAPS: Record<MapId, MapDefinition> = {
@@ -88,6 +144,7 @@ const MAPS: Record<MapId, MapDefinition> = {
     obstacles: MAZE_OBSTACLES,
     spawns: [scaleSpawn({ x: -11, z: -11 }), scaleSpawn({ x: 11, z: 11 })],
     hunterCatchDistance: 0.78,
+    riskyCorridor: MAZE_RISKY,
   },
 };
 
@@ -97,10 +154,6 @@ export function getMapDefinition(mapId: MapId): MapDefinition {
 
 export function isValidMapId(value: string): value is MapId {
   return value === 'classic' || value === 'maze';
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 export function resolveObstacleCollisions(
@@ -157,27 +210,6 @@ export function resolveObstacleCollisions(
   }
 
   return { x: px, z: pz };
-}
-
-/** Disc vs axis-aligned rectangle — for spawn checks and grid BFS. */
-export function isDiscClearOfObstacles(
-  x: number,
-  z: number,
-  radius: number,
-  obstacles: Obstacle[],
-): boolean {
-  for (const obs of obstacles) {
-    const minX = obs.x - obs.halfW;
-    const maxX = obs.x + obs.halfW;
-    const minZ = obs.z - obs.halfD;
-    const maxZ = obs.z + obs.halfD;
-    const closestX = clamp(x, minX, maxX);
-    const closestZ = clamp(z, minZ, maxZ);
-    const dx = x - closestX;
-    const dz = z - closestZ;
-    if (dx * dx + dz * dz < radius * radius) return false;
-  }
-  return true;
 }
 
 /**
