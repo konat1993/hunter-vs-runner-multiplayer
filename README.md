@@ -4,6 +4,10 @@ Real-time **2-player 3D browser game**: one player is the **Hunter** (catch the 
 
 **Live demo:** [hunter-vs-runner-multiplayer.vercel.app](https://hunter-vs-runner-multiplayer.vercel.app/)
 
+## Medium article
+---
+https://medium.com/@konatek1993/building-a-browser-3d-multiplayer-with-ai-agents-vibe-coding-a-hunter-vs-runner-57c1b532cdea
+
 ---
 
 ## Highlights (for reviewers)
