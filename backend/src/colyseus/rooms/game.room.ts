@@ -203,6 +203,16 @@ export class GameRoom extends Room<{ state: GameState }> {
     );
 
     if (this.clients.length === 2 && this.state.phase === Phase.MATCHMAKING) {
+      const distinctUsers = new Set<string>();
+      this.state.players.forEach((player) => {
+        if (player.userId) distinctUsers.add(player.userId);
+      });
+      if (distinctUsers.size < 2) {
+        console.warn(
+          `[GameRoom:${this.roomId}] skip match start: expected 2 distinct users, got ${distinctUsers.size}`,
+        );
+        return;
+      }
       if (this.matchmakingTimer) {
         clearTimeout(this.matchmakingTimer);
         this.matchmakingTimer = null;
@@ -511,6 +521,17 @@ export class GameRoom extends Room<{ state: GameState }> {
   }
 
   onLeave(client: Client, code?: number) {
+    if (this.state.phase === Phase.MATCHMAKING) {
+      this.state.players.delete(client.sessionId);
+      this.explicitQuitSessionIds.delete(client.sessionId);
+      this.pendingInputs.delete(client.sessionId);
+      this.lastInputBySession.delete(client.sessionId);
+      console.log(
+        `[GameRoom:${this.roomId}] matchmaking leave session=${client.sessionId} clients=${this.clients.length}`,
+      );
+      return;
+    }
+
     const isConsentedLeave = code === CloseCode.CONSENTED;
     if (
       isConsentedLeave &&

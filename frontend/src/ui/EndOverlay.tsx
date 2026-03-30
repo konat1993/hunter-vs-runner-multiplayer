@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../state/game.store';
 import { useAuthStore } from '../state/auth.store';
+import { useMatchmakingStore } from '../state/matchmaking.store';
+import { disconnectActiveColyseusRoom } from '../lib/room-cleanup';
 
 const END_REASON_TEXT: Record<string, { winner: string; loser: string }> = {
   CAUGHT: {
@@ -25,6 +27,7 @@ export function EndOverlay() {
   const navigate = useNavigate();
   const { endReason, winnerSessionId, localSessionId, reset } = useGameStore();
   const { refreshStats } = useAuthStore();
+  const resetMatchmaking = useMatchmakingStore((s) => s.reset);
 
   const isWinner = winnerSessionId === localSessionId;
   const reason = endReason ?? 'FORFEIT';
@@ -40,15 +43,19 @@ export function EndOverlay() {
     : 'rgba(255, 80, 16, 0.15)';
   const btnClass = isWinner ? 'btn-neon-runner' : 'btn-neon-hunter';
 
-  async function handlePlayAgain() {
-    await refreshStats();
+  function handlePlayAgain() {
+    disconnectActiveColyseusRoom();
     reset();
+    resetMatchmaking();
+    void refreshStats();
     navigate('/matchmaking');
   }
 
-  async function handleQuitToHome() {
-    await refreshStats();
+  function handleQuitToHome() {
+    disconnectActiveColyseusRoom();
     reset();
+    resetMatchmaking();
+    void refreshStats();
     navigate('/', { replace: true });
   }
 

@@ -4,6 +4,7 @@ import { useMatchmakingStore } from "../state/matchmaking.store";
 import { useGameStore } from "../state/game.store";
 import { useAuthStore } from "../state/auth.store";
 import { joinGameRoom } from "../lib/colyseus";
+import { disconnectActiveColyseusRoom } from "../lib/room-cleanup";
 import { isValidMapId } from "../game/obstacles";
 import type { Room } from "@colyseus/sdk";
 import type {
@@ -54,6 +55,7 @@ export function MatchmakingRoute() {
 			return;
 		}
 		const accessToken = activeSession.access_token;
+		let cancelled = false;
 
 		async function startMatchmaking() {
 			let stateChangeHandler:
@@ -64,6 +66,10 @@ export function MatchmakingRoute() {
 			let leaveHandler:
 				| ((code: number, reason?: string) => void)
 				| null = null;
+			// Drop stale sockets/refs (e.g. ended match still held in matchmaking store).
+			disconnectActiveColyseusRoom();
+			reset();
+			setGameRoom(null);
 			// Keep explicit listener disposers for deterministic cleanup.
 			setStatus("searching");
 			setError(null);
@@ -90,6 +96,10 @@ export function MatchmakingRoute() {
 					accessToken,
 					selectedMapId,
 				);
+				if (cancelled) {
+					gameRoom.leave();
+					return;
+				}
 				roomRef.current = gameRoom;
 				setRoom(gameRoom);
 				setGameRoom(gameRoom);
@@ -115,8 +125,13 @@ export function MatchmakingRoute() {
 							state.reconnectMsRemaining ?? 0,
 						);
 
+						let playerCount = 0;
+						state.players?.forEach(() => {
+							playerCount += 1;
+						});
 						if (
 							!matchedRef.current &&
+							playerCount >= 2 &&
 							(state.phase ===
 								"COUNTDOWN" ||
 								state.phase ===
@@ -223,6 +238,7 @@ export function MatchmakingRoute() {
 		});
 
 		return () => {
+			cancelled = true;
 			disposeRoomListeners?.();
 			clearInterval(timerRef.current!);
 			// After successful match, room ownership is transferred to GameRoute.
@@ -233,6 +249,7 @@ export function MatchmakingRoute() {
 	}, [
 		session,
 		navigate,
+		reset,
 		setStatus,
 		setError,
 		setElapsed,
