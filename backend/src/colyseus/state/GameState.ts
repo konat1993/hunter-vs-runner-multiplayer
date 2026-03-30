@@ -23,7 +23,7 @@ export class GameState extends Schema {
     this.reconnectMsRemaining = 0;
     this.endReason = '';
     this.winnerSessionId = '';
-    this.hunterCatchDistance = 1.2;
+    this.hunterCatchDistance = 0.78;
     this.players = new MapSchema<PlayerState>();
   }
 }

@@ -1,3 +1,7 @@
+/**
+ * Position updates use `resolveObstacleCollisions` (AABB) from map-config — not Rapier or another physics engine.
+ * Adding Rapier (@dimforge/rapier3d-compat) would imply syncing dynamic bodies with Colyseus and reworking client prediction; only worthwhile if gameplay needs non-box colliders or continuous physics beyond what AABBs provide.
+ */
 import type { Obstacle } from '../../map-config';
 import type { PlayerState } from '../state/PlayerState';
 import {

@@ -7,6 +7,7 @@ COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ .
 COPY backend/src/map-config.ts /backend/src/map-config.ts
+COPY backend/src/maze-generator.ts /backend/src/maze-generator.ts
 
 RUN npm run build
 

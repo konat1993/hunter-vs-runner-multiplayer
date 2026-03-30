@@ -4,7 +4,8 @@ export const STAMINA_MAX = 100;
 export const STAMINA_DRAIN_PER_SEC = 25;
 export const STAMINA_REGEN_PER_SEC = 15;
 export const SPRINT_MIN_STAMINA = 0;
-export const CATCH_DISTANCE = 1.2;
+/** Display / docs only — server uses `hunterCatchDistance` from map-config. */
+export const CATCH_DISTANCE = 0.78;
 /** Matches default map `arenaHalf` after `ARENA_WORLD_SCALE` in map-config (legacy reference). */
 export const ARENA_HALF = 10.5;
 export const MATCH_DURATION_MS = 120000;

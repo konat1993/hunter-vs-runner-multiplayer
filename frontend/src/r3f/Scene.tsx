@@ -2,7 +2,9 @@ import { useRef, useEffect, useLayoutEffect } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
+import { Stars } from "@react-three/drei";
 import { Arena } from "./Arena";
+import { ArenaBackdrop } from "./ArenaBackdrop";
 import { PlayerMesh } from "./PlayerMesh";
 import { Lights } from "./Lights";
 import { useGameStore } from "../state/game.store";
@@ -203,9 +205,22 @@ export function Scene({ room, cameraZoom }: SceneProps) {
 			<fog attach="fog" args={["#080810", 220, 900]} />
 			<CameraRig arenaHalf={mapDef.arenaHalf} zoom={cameraZoom} />
 			<Lights />
+			{ENABLE_POSTPROCESSING ? (
+				<Stars
+					radius={420}
+					depth={64}
+					count={900}
+					factor={2.2}
+					saturation={0}
+					fade
+					speed={0.12}
+				/>
+			) : null}
+			<ArenaBackdrop arenaHalf={mapDef.arenaHalf} />
 			<Arena
 				arenaHalf={mapDef.arenaHalf}
 				obstacles={mapDef.obstacles}
+				mapId={mapId}
 			/>
 
 			{/* Local player */}
@@ -243,9 +258,9 @@ export function Scene({ room, cameraZoom }: SceneProps) {
 			{ENABLE_POSTPROCESSING ? (
 				<EffectComposer>
 					<Bloom
-						intensity={1.2}
-						luminanceThreshold={0.3}
-						luminanceSmoothing={0.9}
+						intensity={1.05}
+						luminanceThreshold={0.35}
+						luminanceSmoothing={0.88}
 						mipmapBlur
 					/>
 				</EffectComposer>

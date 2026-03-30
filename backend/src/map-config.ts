@@ -2,6 +2,8 @@
  * Single source for arena layout, spawns, and collision (server + client via Vite alias).
  */
 
+import { generateMazeObstaclesRaw } from './maze-generator';
+
 export interface Obstacle {
   kind: 'pillar' | 'wall';
   x: number;
@@ -58,32 +60,8 @@ const CLASSIC_OBSTACLES_RAW: Obstacle[] = [
 
 const CLASSIC_OBSTACLES: Obstacle[] = CLASSIC_OBSTACLES_RAW.map(scaleObstacle);
 
-/** Maze-like center, open corners / outer ring for chases. */
-const MAZE_OBSTACLES_RAW: Obstacle[] = [
-  { kind: 'pillar', x: -13, z: -13, halfW: 0.45, halfD: 0.45 },
-  { kind: 'pillar', x: 13, z: 13, halfW: 0.45, halfD: 0.45 },
-  { kind: 'pillar', x: -13, z: 13, halfW: 0.45, halfD: 0.45 },
-  { kind: 'pillar', x: 13, z: -13, halfW: 0.45, halfD: 0.45 },
-  { kind: 'wall', x: -6, z: -10, halfW: 3.2, halfD: 0.3 },
-  { kind: 'wall', x: 6, z: -10, halfW: 3.2, halfD: 0.3 },
-  { kind: 'wall', x: 0, z: -10, halfW: 1.2, halfD: 0.3 },
-  { kind: 'wall', x: -6, z: 10, halfW: 3.2, halfD: 0.3 },
-  { kind: 'wall', x: 6, z: 10, halfW: 3.2, halfD: 0.3 },
-  { kind: 'wall', x: 0, z: 10, halfW: 1.2, halfD: 0.3 },
-  { kind: 'wall', x: -10, z: -5, halfW: 0.3, halfD: 2.8 },
-  { kind: 'wall', x: -10, z: 5, halfW: 0.3, halfD: 2.8 },
-  { kind: 'wall', x: 10, z: -5, halfW: 0.3, halfD: 2.8 },
-  { kind: 'wall', x: 10, z: 5, halfW: 0.3, halfD: 2.8 },
-  { kind: 'wall', x: -4, z: -4, halfW: 2.8, halfD: 0.3 },
-  { kind: 'wall', x: 4, z: -4, halfW: 2.8, halfD: 0.3 },
-  { kind: 'wall', x: -4, z: 4, halfW: 2.8, halfD: 0.3 },
-  { kind: 'wall', x: 4, z: 4, halfW: 2.8, halfD: 0.3 },
-  { kind: 'wall', x: 0, z: 0, halfW: 0.3, halfD: 2.6 },
-  { kind: 'wall', x: -4, z: 0, halfW: 0.3, halfD: 2.6 },
-  { kind: 'wall', x: 4, z: 0, halfW: 0.3, halfD: 2.6 },
-  { kind: 'wall', x: 0, z: -4, halfW: 2.6, halfD: 0.3 },
-  { kind: 'wall', x: 0, z: 4, halfW: 2.6, halfD: 0.3 },
-];
+/** Deterministic grid maze + corner pillars; design space before ARENA_WORLD_SCALE. */
+const MAZE_OBSTACLES_RAW: Obstacle[] = generateMazeObstaclesRaw().map((o) => ({ ...o }));
 
 const MAZE_OBSTACLES: Obstacle[] = MAZE_OBSTACLES_RAW.map(scaleObstacle);
 
@@ -99,7 +77,8 @@ const MAPS: Record<MapId, MapDefinition> = {
     arenaHalf: ARENA_HALF_BASE * ARENA_WORLD_SCALE,
     obstacles: CLASSIC_OBSTACLES,
     spawns: [scaleSpawn({ x: -8, z: -8 }), scaleSpawn({ x: 8, z: 8 })],
-    hunterCatchDistance: 1.2,
+    /** Tight but playable — closer than original 1.2, looser than 0.55 overlap-only. */
+    hunterCatchDistance: 0.78,
   },
   maze: {
     id: 'maze',
@@ -108,7 +87,7 @@ const MAPS: Record<MapId, MapDefinition> = {
     arenaHalf: ARENA_HALF_BASE * ARENA_WORLD_SCALE,
     obstacles: MAZE_OBSTACLES,
     spawns: [scaleSpawn({ x: -11, z: -11 }), scaleSpawn({ x: 11, z: 11 })],
-    hunterCatchDistance: 1.15,
+    hunterCatchDistance: 0.78,
   },
 };
 
@@ -178,4 +157,113 @@ export function resolveObstacleCollisions(
   }
 
   return { x: px, z: pz };
+}
+
+/** Disc vs axis-aligned rectangle — for spawn checks and grid BFS. */
+export function isDiscClearOfObstacles(
+  x: number,
+  z: number,
+  radius: number,
+  obstacles: Obstacle[],
+): boolean {
+  for (const obs of obstacles) {
+    const minX = obs.x - obs.halfW;
+    const maxX = obs.x + obs.halfW;
+    const minZ = obs.z - obs.halfD;
+    const maxZ = obs.z + obs.halfD;
+    const closestX = clamp(x, minX, maxX);
+    const closestZ = clamp(z, minZ, maxZ);
+    const dx = x - closestX;
+    const dz = z - closestZ;
+    if (dx * dx + dz * dz < radius * radius) return false;
+  }
+  return true;
+}
+
+/**
+ * Shortest path length in grid steps (4-neighbour BFS). Returns null if unreachable.
+ * Coarse navigation metric for layout validation — not used in gameplay.
+ */
+export function shortestPathGridSteps(
+  fromX: number,
+  fromZ: number,
+  toX: number,
+  toZ: number,
+  arenaHalf: number,
+  obstacles: Obstacle[],
+  radius: number,
+  cellStep = 0.38,
+): number | null {
+  const span = 2 * arenaHalf;
+  const n = Math.max(2, Math.ceil(span / cellStep));
+  const idx = (ix: number, iz: number) => iz * n + ix;
+
+  const walkable: boolean[] = new Array(n * n);
+  for (let iz = 0; iz < n; iz++) {
+    for (let ix = 0; ix < n; ix++) {
+      const x = -arenaHalf + (ix + 0.5) * cellStep;
+      const z = -arenaHalf + (iz + 0.5) * cellStep;
+      walkable[idx(ix, iz)] = isDiscClearOfObstacles(x, z, radius, obstacles);
+    }
+  }
+
+  const clampI = (v: number) => Math.max(0, Math.min(n - 1, v));
+  const ixf = clampI(Math.floor((fromX + arenaHalf) / cellStep));
+  const izf = clampI(Math.floor((fromZ + arenaHalf) / cellStep));
+  const ixt = clampI(Math.floor((toX + arenaHalf) / cellStep));
+  const izt = clampI(Math.floor((toZ + arenaHalf) / cellStep));
+
+  const nearestWalkable = (ix: number, iz: number): [number, number] | null => {
+    if (walkable[idx(ix, iz)]) return [ix, iz];
+    let best: [number, number] | null = null;
+    let bestD = Infinity;
+    for (let j = 0; j < n; j++) {
+      for (let i = 0; i < n; i++) {
+        if (!walkable[idx(i, j)]) continue;
+        const dd = (i - ix) ** 2 + (j - iz) ** 2;
+        if (dd < bestD) {
+          bestD = dd;
+          best = [i, j];
+        }
+      }
+    }
+    return best;
+  };
+
+  const start = nearestWalkable(ixf, izf);
+  const endPt = nearestWalkable(ixt, izt);
+  if (!start || !endPt) return null;
+  const [sx, sz] = start;
+  const [ex, ez] = endPt;
+
+  const startKey = idx(sx, sz);
+  const goalKey = idx(ex, ez);
+  if (!walkable[startKey] || !walkable[goalKey]) return null;
+
+  const dist = new Map<number, number>();
+  const q: number[] = [startKey];
+  dist.set(startKey, 0);
+
+  while (q.length > 0) {
+    const cur = q.shift()!;
+    if (cur === goalKey) return dist.get(cur) ?? null;
+    const iz = Math.floor(cur / n);
+    const ix = cur - iz * n;
+    const d0 = dist.get(cur) ?? 0;
+    const neigh: [number, number][] = [
+      [ix + 1, iz],
+      [ix - 1, iz],
+      [ix, iz + 1],
+      [ix, iz - 1],
+    ];
+    for (const [nx, nz] of neigh) {
+      if (nx < 0 || nx >= n || nz < 0 || nz >= n) continue;
+      const k = idx(nx, nz);
+      if (!walkable[k] || dist.has(k)) continue;
+      dist.set(k, d0 + 1);
+      q.push(k);
+    }
+  }
+
+  return null;
 }
